@@ -1,0 +1,26 @@
+# Wrangler configuration
+name = "easycal"
+main = "src/worker.ts"
+compatibility_date = "2024-01-01"
+
+# D1 Database configuration
+[[d1_databases]]
+binding = "DB"
+database_name = "easycal-db"
+database_id = "066771b0-ce11-4890-b95d-8427058dd129"
+
+# KV namespace configuration
+[[kv_namespaces]]
+binding = "EASYCAL_SESSIONS"
+id = "0cb05fe2ee44425f9952d1a73d5d1651"
+
+# Queue configuration
+[[queues.producers]]
+queue = "easycal-jobs"
+binding = "EASYCAL_JOBS"
+
+[[queues.consumers]]
+queue = "easycal-jobs"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
