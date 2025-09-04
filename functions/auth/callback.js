@@ -28,7 +28,8 @@ export async function onRequest(context) {
         client_secret: env.HL_CLIENT_SECRET,
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: env.OAUTH_REDIRECT_URL
+        redirect_uri: env.OAUTH_REDIRECT_URL,
+        user_type: 'Location'
       }).toString()
     });
 
@@ -46,21 +47,108 @@ export async function onRequest(context) {
 
     const tokenData = await tokenResponse.json();
     console.log('Token received - keys:', Object.keys(tokenData));
+    console.log('Full token data:', tokenData);
     
-    // Use the confirmed location ID for this subaccount
-    const confirmedLocationId = 'HgTZdA5INm0uiGh9KvHC';
+    // Extract location ID from token response
+    const locationId = tokenData.locationId;
+    const userType = tokenData.userType;
+    const companyId = tokenData.companyId;
+    const isBulkInstallation = tokenData.isBulkInstallation;
     
-    // Create simple tenant record
+    console.log('Token exchange successful:', {
+      userType,
+      locationId,
+      companyId,
+      isBulkInstallation
+    });
+    
+    // For bulk installations or agency installs, we might not get a locationId
+    // In this case, we need to handle it as an agency installation
+    if (!locationId && (userType === 'Company' || isBulkInstallation)) {
+      console.log('Agency/bulk installation detected - storing agency token for later location selection');
+      
+      // Store as agency token and redirect to location selection
+      const tenantId = `tenant_${Date.now()}`;
+      
+      await env.DB.prepare(`
+        INSERT OR REPLACE INTO tenants (id, created_at, name, install_context, agency_id)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        tenantId,
+        Math.floor(Date.now() / 1000),
+        'Agency Installation',
+        'agency',
+        companyId
+      ).run();
+
+      // Encrypt and store agency token
+      const encryptedTokens = await encryptTokens({
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token
+      }, env.ENCRYPTION_KEY);
+
+      const tokenId = `token_${Date.now()}`;
+      await env.DB.prepare(`
+        INSERT OR REPLACE INTO tokens (id, tenant_id, location_id, access_token, refresh_token, scope, expires_at, user_type, company_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        tokenId,
+        tenantId,
+        null, // No specific location for agency tokens
+        encryptedTokens.accessToken,
+        encryptedTokens.refreshToken,
+        tokenData.scope,
+        Math.floor((Date.now() + (tokenData.expires_in * 1000)) / 1000),
+        userType,
+        companyId
+      ).run();
+
+      // Redirect to agency dashboard
+      return new Response(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Installation Complete</title>
+          <script>
+            window.location.href = '/?companyId=${companyId}&userType=agency';
+          </script>
+        </head>
+        <body>
+          <h1>✓ EasyCal Installed Successfully!</h1>
+          <p>Agency-level installation complete! Redirecting...</p>
+          <a href="/?companyId=${companyId}&userType=agency">Go to EasyCal</a>
+        </body>
+        </html>
+      `, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+    
+    if (!locationId) {
+      console.error('No location ID found in token response');
+      return new Response(`
+        <!DOCTYPE html>
+        <html><body>
+          <h1>Installation Error</h1>
+          <p>Unable to determine location context. Please try installing from within a specific location.</p>
+        </body></html>
+      `, { status: 400, headers: { 'Content-Type': 'text/html' } });
+    }
+    
+    // Create tenant record
     const tenantId = `tenant_${Date.now()}`;
+    const installContext = 'location'; // Always location for sub-account apps
+    
     await env.DB.prepare(`
       INSERT OR REPLACE INTO tenants (id, created_at, name, install_context, agency_id)
       VALUES (?, ?, ?, ?, ?)
     `).bind(
       tenantId,
       Math.floor(Date.now() / 1000),
-      'New Installation',
-      'location',
-      null
+      'Location Installation',
+      installContext,
+      companyId
     ).run();
 
     // Create location record
@@ -68,9 +156,9 @@ export async function onRequest(context) {
       INSERT OR REPLACE INTO locations (id, tenant_id, name, time_zone, is_enabled)
       VALUES (?, ?, ?, ?, ?)
     `).bind(
-      confirmedLocationId,
+      locationId,
       tenantId,
-      'New Installation',
+      'Location Installation',
       'America/New_York',
       1
     ).run();
@@ -83,34 +171,45 @@ export async function onRequest(context) {
 
     const tokenId = `token_${Date.now()}`;
     await env.DB.prepare(`
-      INSERT OR REPLACE INTO tokens (id, tenant_id, location_id, access_token, refresh_token, scope, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO tokens (id, tenant_id, location_id, access_token, refresh_token, scope, expires_at, user_type, company_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       tokenId,
       tenantId,
-      confirmedLocationId,
+      locationId,
       encryptedTokens.accessToken,
       encryptedTokens.refreshToken,
       tokenData.scope,
-      Math.floor((Date.now() + (tokenData.expires_in * 1000)) / 1000)
+      Math.floor((Date.now() + (tokenData.expires_in * 1000)) / 1000),
+      userType,
+      companyId
     ).run();
 
-    console.log('Installation completed for location:', confirmedLocationId);
+    console.log('Installation completed:', {
+      locationId,
+      userType,
+      companyId,
+      installContext
+    });
 
-    // Success redirect
+    // Success redirect - always redirect to location since we're getting location tokens
+    const redirectUrl = `/?locationId=${locationId}`;
+    const successMessage = 'Installation complete! You can now manage calendars for this location.';
+
     return new Response(`
       <!DOCTYPE html>
       <html>
       <head>
         <title>Installation Complete</title>
         <script>
-          window.location.href = '/?locationId=${confirmedLocationId}';
+          window.location.href = '${redirectUrl}';
         </script>
       </head>
       <body>
         <h1>✓ EasyCal Installed Successfully!</h1>
+        <p>${successMessage}</p>
         <p>Redirecting to your calendar manager...</p>
-        <a href="/?locationId=${confirmedLocationId}">Go to EasyCal</a>
+        <a href="${redirectUrl}">Go to EasyCal</a>
       </body>
       </html>
     `, {

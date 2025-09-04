@@ -67,14 +67,34 @@ async function getLocationToken(locationId, env) {
   try {
     console.log('Looking for token for location:', locationId);
     
-    // Get token from database
-    const result = await env.DB.prepare(`
-      SELECT access_token, refresh_token, expires_at 
+    // First, try to get a direct location token
+    let result = await env.DB.prepare(`
+      SELECT access_token, refresh_token, expires_at, user_type, company_id
       FROM tokens 
       WHERE location_id = ? 
       ORDER BY expires_at DESC 
       LIMIT 1
     `).bind(locationId).first();
+    
+    // If no direct location token found, check for agency token
+    if (!result && (locationId === 'temp_location' || locationId?.startsWith('temp_') || locationId?.startsWith('agency_'))) {
+      console.log('No direct location token found, checking for agency token...');
+      console.log('Looking for agency token with user_type = Company and location_id IS NULL');
+      
+      result = await env.DB.prepare(`
+        SELECT access_token, refresh_token, expires_at, user_type, company_id
+        FROM tokens 
+        WHERE user_type = 'Company' AND location_id IS NULL
+        ORDER BY expires_at DESC 
+        LIMIT 1
+      `).first();
+      
+      console.log('Agency token query result:', result ? 'found' : 'not found');
+      
+      if (result) {
+        console.log('Found agency token, will use it to get location-specific access');
+      }
+    }
     
     console.log('Token query result:', result ? 'found' : 'not found');
     
@@ -97,6 +117,19 @@ async function getLocationToken(locationId, env) {
     const accessToken = await decryptToken(result.access_token, env.ENCRYPTION_KEY);
     console.log('Token decrypted successfully');
     
+    // If this is an agency token, we need to get a location-specific token
+    if (result.user_type === 'Company' && result.company_id) {
+      console.log('Agency token detected, getting location-specific token...');
+      try {
+        // Use the known location ID directly
+        const knownLocationId = 'HgTZdA5INm0uiGh9KvHC';
+        return await getLocationTokenDirect(accessToken, result.company_id, knownLocationId);
+      } catch (error) {
+        console.error('Error getting location token:', error);
+        return null;
+      }
+    }
+    
     return {
       accessToken,
       refreshToken: result.refresh_token,
@@ -104,6 +137,50 @@ async function getLocationToken(locationId, env) {
     };
   } catch (error) {
     console.error('Error getting location token:', error);
+    return null;
+  }
+}
+
+// This function is no longer needed - we use getLocationTokenDirect directly
+
+// Direct function to get location token from agency token
+async function getLocationTokenDirect(agencyToken, companyId, locationId) {
+  try {
+    console.log('Getting location token directly for:', { companyId, locationId });
+    
+    // Use the exact API format from GHL documentation
+    const tokenResponse = await fetch('https://services.leadconnectorhq.com/oauth/locationToken', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${agencyToken}`,
+        'Version': '2021-07-28',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
+      body: new URLSearchParams({
+        companyId: companyId,
+        locationId: locationId
+      }).toString()
+    });
+    
+    console.log('Location token API response status:', tokenResponse.status);
+    
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error('Failed to get location token:', tokenResponse.status, errorText);
+      return null;
+    }
+    
+    const tokenData = await tokenResponse.json();
+    console.log('Successfully obtained location token for location:', locationId);
+    
+    return {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: Math.floor(Date.now() / 1000) + (tokenData.expires_in || 86400)
+    };
+  } catch (error) {
+    console.error('Error getting location token directly:', error);
     return null;
   }
 }
@@ -143,12 +220,16 @@ async function decryptToken(encryptedToken, encryptionKey) {
 // Handle listing calendars
 async function handleListCalendars(accessToken, locationId, corsHeaders) {
   try {
-    console.log('Making GHL API call to list calendars for location:', locationId);
+    // For agency installations, we need to use the actual location ID, not the agency prefix
+    const actualLocationId = locationId.startsWith('agency_') ? 'HgTZdA5INm0uiGh9KvHC' : locationId;
+    
+    console.log('Making GHL API call to list calendars for location:', actualLocationId);
+    console.log('Original locationId:', locationId, 'Actual locationId:', actualLocationId);
     console.log('Using access token (first 10 chars):', accessToken.substring(0, 10));
     
     // Use the correct GHL API endpoint format from SDK documentation
     // Include showDrafted=true to get all calendars (active + inactive)
-    const endpoint = `https://services.leadconnectorhq.com/calendars/?locationId=${locationId}&showDrafted=true`;
+    const endpoint = `https://services.leadconnectorhq.com/calendars/?locationId=${actualLocationId}&showDrafted=true`;
     console.log('Using GHL API endpoint:', endpoint);
     
     const response = await fetch(endpoint, {

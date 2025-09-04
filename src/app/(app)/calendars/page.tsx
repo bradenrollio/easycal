@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Trash2, MoreHorizontal, CheckSquare, Square } from 'lucide-react';
+import { getLocationId } from '@/lib/ghl-context';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/TopBar';
 
@@ -23,16 +24,55 @@ function CalendarsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [locationId, setLocationId] = useState<string | null>(null);
+  const [locationDetected, setLocationDetected] = useState(false);
 
-  // Get location ID from URL params or use a default
-  const locationId = searchParams.get('locationId') || 'temp_location';
-
-  // Load calendars on mount
+  // Detect location ID using comprehensive detection
   useEffect(() => {
-    if (locationId) {
+    detectLocationId();
+  }, []);
+
+  // Load calendars when location ID is available
+  useEffect(() => {
+    if (locationId && locationDetected) {
       loadCalendars();
     }
-  }, [locationId]);
+  }, [locationId, locationDetected]);
+
+  const detectLocationId = async () => {
+    try {
+      console.log('Detecting location ID for calendar page...');
+      
+      // First check URL params
+      const urlLocationId = searchParams.get('locationId');
+      if (urlLocationId && urlLocationId !== 'temp_location') {
+        console.log('Location ID from URL params:', urlLocationId);
+        setLocationId(urlLocationId);
+        setLocationDetected(true);
+        return;
+      }
+      
+      // Use comprehensive location detection
+      const detectedLocationId = await getLocationId();
+      
+      if (detectedLocationId) {
+        console.log('Location ID detected for calendars:', detectedLocationId);
+        setLocationId(detectedLocationId);
+        // Update URL with location ID
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('locationId', detectedLocationId);
+        window.history.replaceState({}, '', newUrl.toString());
+      } else {
+        console.warn('No location ID detected for calendars page');
+        setLocationId('temp_location'); // Fallback
+      }
+    } catch (error) {
+      console.error('Error detecting location ID for calendars:', error);
+      setLocationId('temp_location'); // Fallback
+    } finally {
+      setLocationDetected(true);
+    }
+  };
 
   const loadCalendars = async () => {
     try {

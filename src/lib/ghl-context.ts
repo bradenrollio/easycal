@@ -191,11 +191,18 @@ export function getGHLLocationFromIframe(): Promise<string | null> {
   });
 }
 
+// Enhanced context interface for agency installations
+export interface EnhancedGHLContext extends GHLContext {
+  userType?: 'Location' | 'Company';
+  companyId?: string;
+  isAgencyInstall?: boolean;
+}
+
 // Get location ID using all available methods
 export async function getLocationId(): Promise<string | null> {
   console.log('Starting location ID detection...');
   
-  // 1. Try URL parameters first
+  // 1. Try URL parameters first (including agency params)
   const urlLocationId = parseGHLLocationFromURL();
   if (urlLocationId && urlLocationId !== 'temp_location') {
     console.log('Location ID from URL:', urlLocationId);
@@ -224,6 +231,10 @@ export async function getLocationId(): Promise<string | null> {
       if (data.locationId) {
         console.log('Location ID detected from tokens:', data.locationId);
         return data.locationId;
+      } else if (data.isAgencyInstall && data.companyId) {
+        // For agency installations, use the company ID as a signal to the backend
+        console.log('Agency installation detected, using company ID:', data.companyId);
+        return `agency_${data.companyId}`;
       }
     }
   } catch (error) {
@@ -232,4 +243,50 @@ export async function getLocationId(): Promise<string | null> {
 
   console.warn('No location ID found using any method');
   return null;
+}
+
+// Get enhanced context that handles both agency and location installs
+export async function getEnhancedGHLContext(): Promise<EnhancedGHLContext | null> {
+  console.log('Getting enhanced GHL context...');
+  
+  // First try to get basic context
+  const basicContext = await getGHLContext();
+  
+  // Check URL for agency/company parameters
+  const searchParams = new URLSearchParams(window.location.search);
+  const companyId = searchParams.get('companyId');
+  const userTypeParam = searchParams.get('userType');
+  
+  if (companyId || userTypeParam === 'agency') {
+    return {
+      ...basicContext,
+      companyId: companyId || basicContext?.companyId,
+      userType: 'Company',
+      isAgencyInstall: true,
+      locationId: basicContext?.locationId || 'agency_' + (companyId || basicContext?.companyId)
+    };
+  }
+  
+  // Try to detect from API
+  try {
+    const response = await fetch('/api/detect-location');
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        ...basicContext,
+        locationId: data.locationId,
+        companyId: data.companyId,
+        userType: data.userType,
+        isAgencyInstall: data.userType === 'Company'
+      };
+    }
+  } catch (error) {
+    console.error('Error detecting enhanced context:', error);
+  }
+  
+  return basicContext ? {
+    ...basicContext,
+    userType: 'Location',
+    isAgencyInstall: false
+  } : null;
 }

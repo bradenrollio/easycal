@@ -14,31 +14,52 @@ export async function onRequest(context) {
   }
   
   try {
-    // Get the most recent location with a valid token, prioritizing real GHL location IDs
-    const result = await env.DB.prepare(`
-      SELECT l.id, l.name, l.time_zone, t.expires_at
-      FROM locations l
-      JOIN tokens t ON l.id = t.location_id
-      WHERE l.is_enabled = 1 AND t.expires_at > ?
+    // First, try to get the most recent valid token (including agency tokens)
+    const tokenResult = await env.DB.prepare(`
+      SELECT t.location_id, t.user_type, t.company_id, t.expires_at,
+             l.name as location_name, l.time_zone
+      FROM tokens t
+      LEFT JOIN locations l ON l.id = t.location_id
+      WHERE t.expires_at > ?
       ORDER BY 
-        CASE WHEN l.id LIKE 'temp_%' THEN 1 ELSE 0 END,
+        CASE WHEN t.user_type = 'Location' THEN 0 ELSE 1 END,
+        CASE WHEN t.location_id NOT LIKE 'temp_%' AND t.location_id NOT LIKE 'agency_%' THEN 0 ELSE 1 END,
         t.expires_at DESC
       LIMIT 1
     `).bind(Math.floor(Date.now() / 1000)).first();
     
-    if (!result) {
+    if (!tokenResult) {
       return new Response(JSON.stringify({
-        error: 'No valid location found'
+        error: 'No valid tokens found'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
     
+    // Handle agency-level installations
+    if (tokenResult.user_type === 'Company') {
+      return new Response(JSON.stringify({
+        locationId: tokenResult.location_id,
+        companyId: tokenResult.company_id,
+        userType: 'Company',
+        isAgencyInstall: true,
+        locationName: 'Agency Installation',
+        timeZone: 'America/New_York'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // Handle location-level installations
     return new Response(JSON.stringify({
-      locationId: result.id,
-      locationName: result.name,
-      timeZone: result.time_zone
+      locationId: tokenResult.location_id,
+      companyId: tokenResult.company_id,
+      userType: 'Location',
+      isAgencyInstall: false,
+      locationName: tokenResult.location_name || 'Location Installation',
+      timeZone: tokenResult.time_zone || 'America/New_York'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }

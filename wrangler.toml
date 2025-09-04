@@ -9,7 +9,7 @@ pages_build_output_dir = ".next/standalone"
 [vars]
 APP_BASE_URL = "https://easycal.enrollio.ai"
 HL_CLIENT_ID = "68b96169e165955a7edc20b3-mf58ywbo"
-OAUTH_REDIRECT_URL = "https://services.leadconnectorhq.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/callback"
+OAUTH_REDIRECT_URL = "https://easycal.enrollio.ai/auth/callback"
 
 # D1 Database configuration
 [[d1_databases]]

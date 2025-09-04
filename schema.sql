@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS tokens (
   refresh_token TEXT NOT NULL,
   scope TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
+  user_type TEXT,
+  company_id TEXT,
   FOREIGN KEY (tenant_id) REFERENCES tenants(id),
   FOREIGN KEY (location_id) REFERENCES locations(id)
 );

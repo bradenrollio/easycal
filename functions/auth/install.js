@@ -30,7 +30,8 @@ export async function onRequest(context) {
       scopes.push('oauth.readonly', 'oauth.write');
     }
 
-    // Use the correct GoHighLevel marketplace authorization URL from official docs
+    // Use the correct GoHighLevel authorization URL from official docs
+    // For marketplace apps, use the marketplace chooselocation URL
     const baseUrl = 'https://marketplace.gohighlevel.com/oauth/chooselocation';
     const params = new URLSearchParams({
       response_type: 'code',
@@ -39,6 +40,11 @@ export async function onRequest(context) {
       scope: scopes.join(' '),
       state: state,
     });
+    
+    // Add user_type parameter for agency installs
+    if (installType === 'agency') {
+      params.set('user_type', 'Company');
+    }
 
     const authUrl = `${baseUrl}?${params.toString()}`;
     console.log('Generated auth URL:', authUrl);
