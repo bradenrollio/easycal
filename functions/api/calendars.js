@@ -65,6 +65,8 @@ export async function onRequest(context) {
 // Get access token for a location
 async function getLocationToken(locationId, env) {
   try {
+    console.log('Looking for token for location:', locationId);
+    
     // Get token from database
     const result = await env.DB.prepare(`
       SELECT access_token, refresh_token, expires_at 
@@ -74,20 +76,26 @@ async function getLocationToken(locationId, env) {
       LIMIT 1
     `).bind(locationId).first();
     
+    console.log('Token query result:', result ? 'found' : 'not found');
+    
     if (!result) {
+      console.log('No token found for location:', locationId);
       return null;
     }
     
     // Check if token is expired
     const now = Math.floor(Date.now() / 1000);
+    console.log('Token expires at:', result.expires_at, 'Current time:', now);
+    
     if (result.expires_at <= now) {
-      // TODO: Implement token refresh
       console.warn('Token expired for location:', locationId);
       return null;
     }
     
     // Decrypt token
+    console.log('Attempting to decrypt token...');
     const accessToken = await decryptToken(result.access_token, env.ENCRYPTION_KEY);
+    console.log('Token decrypted successfully');
     
     return {
       accessToken,

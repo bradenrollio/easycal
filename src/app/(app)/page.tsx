@@ -14,15 +14,42 @@ function DashboardContent() {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Get location ID from URL params
-  const locationId = searchParams.get('locationId') || 'temp_location';
+  // Get location ID from URL params or try to detect it
+  const [locationId, setLocationId] = useState(searchParams.get('locationId') || null);
+  const [locationDetected, setLocationDetected] = useState(false);
 
   // Load metrics on mount
   useEffect(() => {
     if (locationId) {
       loadMetrics();
+    } else if (!locationDetected) {
+      // Try to detect location ID from available tokens
+      detectLocationId();
     }
-  }, [locationId]);
+  }, [locationId, locationDetected]);
+
+  const detectLocationId = async () => {
+    try {
+      console.log('Detecting location ID...');
+      // Try to get the correct location ID from our detection API
+      const response = await fetch('/api/detect-location');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Detected location:', data);
+        if (data.locationId) {
+          setLocationId(data.locationId);
+          // Update URL with location ID
+          window.history.replaceState({}, '', `/?locationId=${data.locationId}`);
+        }
+      } else {
+        console.error('Failed to detect location:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error detecting location ID:', error);
+    } finally {
+      setLocationDetected(true);
+    }
+  };
 
   const loadMetrics = async () => {
     try {
@@ -60,6 +87,35 @@ function DashboardContent() {
       setIsLoading(false);
     }
   };
+  // Show loading state if no location ID detected yet
+  if (!locationId && !locationDetected) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Connecting to your GHL account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no location found
+  if (!locationId && locationDetected) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-4">
+            <h2 className="text-xl font-bold">No Location Found</h2>
+            <p>Unable to detect your GHL location. Please try reinstalling the app.</p>
+          </div>
+          <a href="/auth/install" className="text-brand-yellow hover:underline">
+            Reinstall EasyCal
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -69,6 +125,11 @@ function DashboardContent() {
         <p className="text-muted-foreground">
           Import multiple calendars from a CSV or manage existing ones in bulk.
         </p>
+        {locationId && (
+          <p className="text-xs text-gray-500 mt-2">
+            Location: {locationId}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3 max-w-6xl">

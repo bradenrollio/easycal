@@ -99,10 +99,8 @@ export async function onRequest(context) {
           .btn { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
         </style>
         <script>
-          // Auto-redirect after 3 seconds
-          setTimeout(() => {
-            window.location.href = '/?locationId=${installResult.locationId}';
-          }, 3000);
+          // Auto-redirect immediately to the app with location context
+          window.location.href = '/?locationId=${installResult.locationId}';
         </script>
       </head>
       <body>
@@ -176,6 +174,7 @@ async function exchangeCodeForTokens(code, env) {
 
     const tokenData = await response.json();
     console.log('Token exchange successful');
+    console.log('Full token response:', JSON.stringify(tokenData, null, 2));
     
     return { success: true, data: tokenData };
   } catch (error) {
