@@ -12,14 +12,18 @@ export async function onRequest(context) {
     // Generate state for CSRF protection
     const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     
-    // Build scopes
+    // Build scopes - Include all necessary scopes for calendar and location operations
     const scopes = [
       'calendars.readonly',
       'calendars.write',
       'calendars/groups.write',
       'calendars/groups.readonly',
       'calendars/events.readonly',
-      'calendars/events.write'
+      'calendars/events.write',
+      'locations.readonly',
+      'locations.write',
+      'locations/customFields.readonly',
+      'locations/customFields.write'
     ];
 
     if (installType === 'agency') {

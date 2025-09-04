@@ -146,8 +146,9 @@ async function handleListCalendars(accessToken, locationId, corsHeaders) {
     console.log('Making GHL API call to list calendars for location:', locationId);
     console.log('Using access token (first 10 chars):', accessToken.substring(0, 10));
     
-    // Use the correct GHL API endpoint format from documentation
-    const endpoint = `https://services.leadconnectorhq.com/calendars/?locationId=${locationId}`;
+    // Use the correct GHL API endpoint format from SDK documentation
+    // Include showDrafted=true to get all calendars (active + inactive)
+    const endpoint = `https://services.leadconnectorhq.com/calendars/?locationId=${locationId}&showDrafted=true`;
     console.log('Using GHL API endpoint:', endpoint);
     
     const response = await fetch(endpoint, {

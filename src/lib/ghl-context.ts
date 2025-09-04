@@ -83,28 +83,36 @@ export function getGHLLocationFromIframe(): Promise<string | null> {
     const isInIframe = window !== window.parent;
     
     if (!isInIframe) {
+      console.log('Not in iframe, cannot get GHL context');
       resolve(null);
       return;
     }
 
+    console.log('In iframe - attempting to get location from GHL parent');
     let resolved = false;
 
     const handleMessage = (event: MessageEvent) => {
       if (resolved) return;
       
-      console.log('Received message from parent:', event.origin, event.data);
+      console.log('Received message from GHL parent:', {
+        origin: event.origin,
+        data: event.data,
+        type: typeof event.data
+      });
       
       // Check for location ID in various message formats
       if (event.data) {
         const locationId = event.data.locationId || 
                           event.data.location_id || 
                           event.data.companyId ||
-                          event.data.company_id;
+                          event.data.company_id ||
+                          event.data.location ||
+                          event.data.company;
         
-        if (locationId) {
+        if (locationId && typeof locationId === 'string' && locationId.length > 5) {
           resolved = true;
           window.removeEventListener('message', handleMessage);
-          console.log('Location ID from iframe message:', locationId);
+          console.log('Location ID extracted from GHL iframe:', locationId);
           resolve(locationId);
         }
       }
@@ -112,25 +120,51 @@ export function getGHLLocationFromIframe(): Promise<string | null> {
 
     window.addEventListener('message', handleMessage);
 
-    // Request location context from parent GHL window
+    // Try multiple methods to request context from GHL
     try {
+      // Method 1: Standard context request
       window.parent.postMessage({ 
-        type: 'get-location-id',
-        action: 'request-context',
-        source: 'easycal'
+        type: 'request-location-context',
+        source: 'easycal-app'
       }, '*');
+      
+      // Method 2: Alternative format
+      setTimeout(() => {
+        if (!resolved) {
+          window.parent.postMessage({ 
+            action: 'getLocationId',
+            app: 'easycal'
+          }, '*');
+        }
+      }, 500);
+      
+      // Method 3: Try to get from window.location if GHL passes it
+      setTimeout(() => {
+        if (!resolved) {
+          // Check if GHL passes location in URL hash or search params
+          const urlLocation = parseGHLLocationFromURL();
+          if (urlLocation && urlLocation !== 'temp_location') {
+            resolved = true;
+            window.removeEventListener('message', handleMessage);
+            console.log('Location ID from URL within iframe:', urlLocation);
+            resolve(urlLocation);
+          }
+        }
+      }, 1000);
+      
     } catch (error) {
-      console.warn('Could not send message to parent:', error);
+      console.warn('Could not send message to GHL parent:', error);
     }
 
-    // Timeout after 2 seconds
+    // Timeout after 3 seconds
     setTimeout(() => {
       if (!resolved) {
         resolved = true;
         window.removeEventListener('message', handleMessage);
+        console.log('Timeout waiting for GHL location context');
         resolve(null);
       }
-    }, 2000);
+    }, 3000);
   });
 }
 
