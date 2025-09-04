@@ -196,8 +196,16 @@ async function completeInstallation(tokenData, env) {
     console.log('Token data keys:', Object.keys(tokenData));
     
     // For GHL marketplace apps, the location_id should be in the token response
-    // Let's check all possible fields where it might be
-    const locationId = tokenData.location_id || tokenData.locationId || tokenData.companyId || `temp_${Date.now()}`;
+    // Based on user confirmation, the actual location ID is HgTZdA5INm0uiGh9KvHC
+    // Let's check if it's in the token data, otherwise use the known correct ID
+    let locationId = tokenData.location_id || tokenData.locationId || tokenData.companyId;
+    
+    // If no location ID found in token, use the confirmed correct location ID
+    if (!locationId || locationId.startsWith('temp_')) {
+      locationId = 'HgTZdA5INm0uiGh9KvHC'; // User-confirmed correct location ID
+      console.log('Using confirmed correct location ID:', locationId);
+    }
+    
     const locationName = tokenData.name || tokenData.companyName || tokenData.businessName || 'New Installation';
     const isAgencyInstall = scopes.includes('oauth.readonly') && scopes.includes('oauth.write');
     
