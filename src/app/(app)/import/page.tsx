@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { FieldMapper } from '@/components/FieldMapper';
+import { TopBar } from '@/components/TopBar';
+import { DryRunPreview } from '@/components/DryRunPreview';
 
 interface CSVRow {
   [key: string]: string;
@@ -17,14 +20,33 @@ interface CSVColumn {
   sampleValues: string[];
 }
 
-type ImportStep = 'upload' | 'map' | 'review' | 'processing';
+type ImportStep = 'upload' | 'map' | 'preview' | 'processing';
 
 export default function ImportPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [csvColumns, setCsvColumns] = useState<CSVColumn[]>([]);
   const [fieldMappings, setFieldMappings] = useState<Record<string, number | null>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [brandConfig, setBrandConfig] = useState(null);
+
+  // Load brand config on mount
+  useEffect(() => {
+    loadBrandConfig();
+  }, []);
+
+  const loadBrandConfig = async () => {
+    try {
+      const response = await fetch('/api/brand-config?locationId=loc1'); // TODO: Get from context
+      if (response.ok) {
+        const config = await response.json();
+        setBrandConfig(config);
+      }
+    } catch (error) {
+      console.error('Error loading brand config:', error);
+    }
+  };
 
   const handleFileSelect = useCallback((file: File) => {
     setIsLoading(true);
@@ -70,8 +92,8 @@ export default function ImportPage() {
     setFieldMappings(mappings);
   }, []);
 
-  const handleProceedToReview = () => {
-    setCurrentStep('review');
+  const handleProceedToPreview = () => {
+    setCurrentStep('preview');
   };
 
   const handleStartImport = async () => {
@@ -88,13 +110,13 @@ export default function ImportPage() {
       // Simulate processing
       await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Redirect to job status page
-      window.location.href = '/jobs/job_123';
+      // Show success message
+      alert('Import completed successfully!');
 
     } catch (error) {
       console.error('Import failed:', error);
       alert('Import failed. Please try again.');
-      setCurrentStep('review');
+      setCurrentStep('preview');
     } finally {
       setIsLoading(false);
     }
@@ -122,10 +144,20 @@ export default function ImportPage() {
 
       <div className="mt-6 text-center">
         <p className="text-sm text-muted-foreground mb-4">
-          Your CSV should include columns for calendar details. Download a{' '}
-          <button className="text-brand-yellow hover:underline">sample template</button>
-          {' '}if you need help formatting your data.
+          Your CSV should include columns for calendar details. Download our{' '}
+          <a 
+            href="/calendar-template.csv" 
+            download="calendar-template.csv"
+            className="text-brand-yellow hover:underline font-medium"
+          >
+            sample template
+          </a>
+          {' '}with all required fields for GoHighLevel calendars.
         </p>
+        <div className="text-xs text-muted-foreground mt-2">
+          <strong>Required fields:</strong> calendar_type, calendar_name, day_of_week, time_of_week, slot_interval, class_duration, min_scheduling_notice, max_bookings_per_day<br/>
+          <strong>Optional fields:</strong> class_description, calendar_group, custom_url
+        </div>
       </div>
     </div>
   );
@@ -160,7 +192,7 @@ export default function ImportPage() {
             {csvData.length} rows ready to import
           </span>
           <Button
-            onClick={handleProceedToReview}
+            onClick={handleProceedToPreview}
             disabled={!canProceedToReview() || isLoading}
           >
             Review Import
@@ -171,7 +203,41 @@ export default function ImportPage() {
     </div>
   );
 
-  const renderReviewStep = () => {
+  const renderPreviewStep = () => {
+    if (!brandConfig) {
+      return (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading brand configuration...</p>
+        </div>
+      );
+    }
+
+    // Convert CSV data to calendar rows format
+    const calendarRows = csvData.map(row => {
+      const mappedRow: any = {};
+      Object.entries(fieldMappings).forEach(([field, columnIndex]) => {
+        if (columnIndex !== null) {
+          const columnName = csvColumns[columnIndex]?.name;
+          if (columnName) {
+            mappedRow[field] = row[columnName] || '';
+          }
+        }
+      });
+      return mappedRow;
+    });
+
+    return (
+      <DryRunPreview
+        csvRows={calendarRows}
+        brandConfig={brandConfig}
+        onProceed={handleStartImport}
+        onBack={() => setCurrentStep('map')}
+      />
+    );
+  };
+
+  const renderOldReviewStep = () => {
     // Generate preview of first few rows with mappings
     const previewRows = csvData.slice(0, 5).map((row, index) => {
       const mappedData: Record<string, string> = {};
@@ -269,7 +335,7 @@ export default function ImportPage() {
         <div className="flex items-center justify-between">
           <Button
             variant="outline"
-            onClick={() => setCurrentStep('map')}
+            onClick={() => setCurrentStep('preview')}
             disabled={isLoading}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -326,11 +392,17 @@ export default function ImportPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {currentStep === 'upload' && renderUploadStep()}
-      {currentStep === 'map' && renderMapStep()}
-      {currentStep === 'review' && renderReviewStep()}
-      {currentStep === 'processing' && renderProcessingStep()}
+    <div className="min-h-screen bg-background">
+      <TopBar 
+        showBackButton={true}
+        onBack={() => router.push('/')}
+      />
+      <div className="container mx-auto px-4 py-6">
+        {currentStep === 'upload' && renderUploadStep()}
+        {currentStep === 'map' && renderMapStep()}
+        {currentStep === 'preview' && renderPreviewStep()}
+        {currentStep === 'processing' && renderProcessingStep()}
+      </div>
     </div>
   );
 }

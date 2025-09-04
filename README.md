@@ -1,23 +1,60 @@
-# EasyCal
+# EasyCal - Brand-Aware Bulk Calendar Manager
 
-A production-grade, iframe-embeddable web app for simple calendar management. This white-label solution lets users upload CSV files to create trial calendars and perform bulk delete operations across multiple sub-accounts.
+A production-grade, iframe-embeddable web application for bulk calendar management in GoHighLevel. Create, manage, and delete calendars in bulk with automatic brand application and advanced scheduling features.
 
-## 🚀 Features
+## 🎨 Key Features
 
-### Core Functionality
+### Brand-Aware Calendar Creation
+- **Brand Configuration**: Set default colors, button text, and timezone per location
+- **Smart Branding**: Automatically applies brand colors and button text to all calendars
+- **Override Support**: Individual CSV rows can override brand settings
+- **Purpose-Based Buttons**: Automatic button text for makeup classes ("Schedule Make-Up")
+
+### Advanced CSV Import
+- **Comprehensive Field Support**: 17 different calendar fields including schedule blocks
+- **Schedule Blocks**: Support for multi-day/multi-time calendars ("Mon 09:00-10:00; Wed 14:30-15:30")
+- **Group Auto-Creation**: Automatically creates calendar groups if they don't exist
+- **Smart Slug Generation**: Auto-generates unique URL slugs with conflict resolution
+- **Dry-Run Preview**: Validate and preview all calendars before importing
+- **Idempotency**: Prevents duplicate calendars on re-import
+
+### Production Features
 - **OAuth Integration**: Secure authentication with GoHighLevel using the official SDK
 - **Multi-Tenant Architecture**: Support for agency-level and location-level installations
-- **Bulk CSV Import**: Upload, map, and create calendars from CSV files
-- **Bulk Delete**: Select and delete multiple calendars with confirmation
-- **Job Queue**: Background processing with progress tracking and error handling
 - **Iframe Safe**: Optimized for embedding with automatic height adjustment
-
-### User Experience
-- **Modern UI**: Clean, professional design with custom brand palette
-- **Responsive**: Works seamlessly on desktop and mobile devices
+- **Rate Limiting**: Built-in rate limiting to respect GoHighLevel API limits
+- **Error Handling**: Comprehensive validation and error handling
 - **Real-time Progress**: Live updates during bulk operations
-- **Error Handling**: Comprehensive error messages and retry mechanisms
-- **CSV Export**: Download results and error reports
+
+## 📊 CSV Format
+
+### Required Fields
+- `calendar_type`: Must be "event" for GoHighLevel event calendars
+- `calendar_name`: Display name for the calendar (e.g., "Yoga Basics")
+- `day_of_week`: Day of the week (Monday, Tuesday, etc.)
+- `time_of_week`: Time range in 24-hour format (e.g., "09:00-10:00")
+- `slot_interval`: Time slot interval in minutes (e.g., 30, 60)
+- `class_duration`: Duration of each session in minutes
+- `min_scheduling_notice`: Minimum days notice required for booking
+- `max_bookings_per_day`: Maximum number of bookings allowed per day
+
+### Optional Fields
+- `class_description`: Brief description of the class or service
+- `calendar_group`: Group/category to organize calendars (auto-created if needed)
+- `custom_url`: Custom URL slug (auto-generated if not provided)
+- `button_text`: Override default button text
+- `primary_color_hex`: Override brand primary color (#RRGGBB)
+- `background_color_hex`: Override brand background color (#RRGGBB)
+- `timezone`: Override default timezone (IANA format)
+- `calendar_purpose`: Type of calendar (trial, makeup, regular)
+- `schedule_blocks`: Multi-day/time format ("Mon 09:00-10:00; Wed 14:30-15:30")
+
+### Sample CSV
+```csv
+calendar_type,calendar_name,day_of_week,time_of_week,slot_interval,class_duration,min_scheduling_notice,max_bookings_per_day,class_description,calendar_group,custom_url,button_text,primary_color_hex,background_color_hex,timezone,calendar_purpose,schedule_blocks
+event,Tiny Tots (Ages 2–3),Saturday,09:00-09:30,15,30,1,12,Intro to movement for toddlers,Saturday Trials,tiny-tots,Reserve Spot,#FFC300,#FFFFFF,America/New_York,trial,"Sat 09:00-09:30; Sat 10:00-10:30"
+event,Make-Up Class Portal,Monday,15:00-17:00,15,30,0,30,Flexible scheduling for missed classes,Makeup Classes,makeup-portal,,#FFD60A,#FFFFFF,America/New_York,makeup,"Mon 15:00-17:00; Thu 15:00-17:00"
+```
 
 ## 🛠 Tech Stack
 

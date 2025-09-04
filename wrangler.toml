@@ -1,7 +1,15 @@
 # Wrangler configuration
 name = "easycal"
-main = "src/worker.ts"
 compatibility_date = "2024-01-01"
+
+# Pages configuration
+pages_build_output_dir = ".next/standalone"
+
+# Environment variables
+[vars]
+APP_BASE_URL = "https://easycal.enrollio.ai"
+HL_CLIENT_ID = "68b96169e165955a7edc20b3-mf58ywbo"
+OAUTH_REDIRECT_URL = "https://services.leadconnectorhq.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/callback"
 
 # D1 Database configuration
 [[d1_databases]]
@@ -19,8 +27,3 @@ id = "0cb05fe2ee44425f9952d1a73d5d1651"
 queue = "easycal-jobs"
 binding = "EASYCAL_JOBS"
 
-[[queues.consumers]]
-queue = "easycal-jobs"
-max_batch_size = 10
-max_batch_timeout = 30
-max_retries = 3

@@ -1,0 +1,3 @@
+/auth/install /auth/install 200
+/auth/callback /auth/callback 200
+/api/health /api/health 200

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, Trash2, MoreHorizontal, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TopBar } from '@/components/TopBar';
 
 interface Calendar {
   id: string;
@@ -42,6 +44,7 @@ const mockCalendars: Calendar[] = [
 ];
 
 export default function CalendarsPage() {
+  const router = useRouter();
   const [calendars, setCalendars] = useState<Calendar[]>(mockCalendars);
   const [selectedCalendars, setSelectedCalendars] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +110,12 @@ export default function CalendarsPage() {
   const someSelected = selectedCalendars.size > 0 && selectedCalendars.size < filteredCalendars.length;
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-background">
+      <TopBar 
+        showBackButton={true}
+        onBack={() => router.push('/')}
+      />
+      <div className="container mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -263,6 +271,7 @@ export default function CalendarsPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

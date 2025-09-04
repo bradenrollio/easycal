@@ -266,7 +266,7 @@ export class GoHighLevelClient {
    * Generate OAuth authorization URL
    */
   getAuthorizationUrl(scopes: string[], state?: string): string {
-    const baseUrl = 'https://marketplace.gohighlevel.com/oauth/chooselocation';
+    const baseUrl = 'https://services.leadconnectorhq.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/authorize';
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.options.clientId || process.env.HL_CLIENT_ID!,

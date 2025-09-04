@@ -15,10 +15,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "EasyCal",
-  description: "Simple calendar management for your business",
-  keywords: ["calendar", "management", "bulk", "scheduling", "business"],
+  description: "Brand-aware bulk calendar management for GoHighLevel",
+  keywords: ["calendar", "management", "bulk", "scheduling", "business", "gohighlevel"],
   authors: [{ name: "EasyCal Team" }],
   viewport: "width=device-width, initial-scale=1",
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

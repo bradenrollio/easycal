@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, RefreshCw, MapPin, Settings as SettingsIcon, Shield } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Save, RefreshCw, MapPin, Settings as SettingsIcon, Shield, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TopBar } from '@/components/TopBar';
+import { BrandConfigComponent } from '@/components/BrandConfig';
 
 interface Location {
   id: string;
@@ -25,7 +28,7 @@ interface DefaultSettings {
 const mockLocations: Location[] = [
   {
     id: 'loc1',
-    name: 'Main Office',
+    name: 'Primary Location',
     timeZone: 'America/New_York',
     isEnabled: true,
     hasToken: true,
@@ -57,10 +60,11 @@ const defaultSettings: DefaultSettings = {
 };
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [locations, setLocations] = useState<Location[]>(mockLocations);
   const [settings, setSettings] = useState<DefaultSettings>(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'locations' | 'defaults' | 'security'>('locations');
+  const [activeTab, setActiveTab] = useState<'brand' | 'locations' | 'defaults' | 'security'>('brand');
 
   const handleLocationToggle = (locationId: string, isEnabled: boolean) => {
     setLocations(prev =>
@@ -102,14 +106,20 @@ export default function SettingsPage() {
   };
 
   const tabs = [
+    { id: 'brand', label: 'Brand Config', icon: Palette },
     { id: 'locations', label: 'Locations', icon: MapPin },
     { id: 'defaults', label: 'Defaults', icon: SettingsIcon },
     { id: 'security', label: 'Security', icon: Shield },
   ];
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <TopBar 
+        showBackButton={true}
+        onBack={() => router.push('/')}
+      />
+      <div className="container mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-brand-navy mb-2">Settings</h1>
@@ -141,6 +151,20 @@ export default function SettingsPage() {
 
         {/* Tab Content */}
         <div className="bg-white rounded-lg border border-border p-6">
+          {/* Brand Config Tab */}
+          {activeTab === 'brand' && (
+            <div>
+              <h2 className="text-lg font-semibold text-brand-navy mb-4">Brand Configuration</h2>
+              <p className="text-muted-foreground mb-6">
+                Configure default colors and button text that will be applied to all calendars. Individual CSV rows can override these settings.
+              </p>
+              <BrandConfigComponent 
+                locationId="loc1" // TODO: Get from actual context
+                onSave={(config) => console.log('Brand config saved:', config)}
+              />
+            </div>
+          )}
+
           {/* Locations Tab */}
           {activeTab === 'locations' && (
             <div>
@@ -360,6 +384,7 @@ export default function SettingsPage() {
             <Save className="w-4 h-4 mr-2" />
             Save Changes
           </Button>
+        </div>
         </div>
       </div>
     </div>
