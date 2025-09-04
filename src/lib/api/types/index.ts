@@ -34,6 +34,7 @@ export interface APIError {
 /**
  * GoHighLevel API response types
  */
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace GHL {
   /**
    * Calendar object from GHL API
@@ -99,6 +100,7 @@ export namespace GHL {
 /**
  * Request/Response types for common operations
  */
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace API {
   /**
    * Calendar creation request

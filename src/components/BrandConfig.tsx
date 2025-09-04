@@ -303,7 +303,7 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
                   PNG, JPEG, JPG or GIF (max. dimensions 180×180px | max. size 2.5mb)
                 </p>
                 <p className="text-xs text-gray-400">
-                  The uploaded image will be visible within the Group View for Neo template and won't appear on the individual calendar link
+                  The uploaded image will be visible within the Group View for Neo template and won&apos;t appear on the individual calendar link
                 </p>
               </div>
             )}
