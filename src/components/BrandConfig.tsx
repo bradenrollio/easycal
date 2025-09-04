@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Palette, Type, Clock, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Palette, Type, Clock, AlertCircle } from 'lucide-react';
 import { BrandConfig } from '@/types/brand';
-import { validateColor, validateButtonText, validateTimezone } from '@/lib/validators';
-import { getCommonTimezones } from '@/lib/helpers';
+import { validateColor, validateButtonText, validateTimezone } from '@/lib/utils/validation';
+import { getCommonTimezones } from '@/lib/utils/formatting';
 
 interface BrandConfigProps {
   locationId: string;

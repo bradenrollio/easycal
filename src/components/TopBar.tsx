@@ -1,42 +1,89 @@
+/**
+ * @fileoverview TopBar component for application header
+ * @description Provides consistent header with logo, navigation, and iframe height management.
+ * Automatically adjusts iframe height for embedded usage.
+ * @author AI Assistant
+ */
+
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 
+/**
+ * Props for TopBar component
+ */
 interface TopBarProps {
+  /** Whether to show back navigation button */
   showBackButton?: boolean;
+  /** Callback function when back button is clicked */
   onBack?: () => void;
+  /** Additional content to render in the header (e.g., user menu, actions) */
   children?: React.ReactNode;
 }
 
-export function TopBar({ showBackButton = false, onBack, children }: TopBarProps) {
-  // Handle iframe height adjustments
+/**
+ * Application header component with iframe support
+ * @description Renders a sticky header with logo, optional back button, and children.
+ * Automatically manages iframe height adjustments for embedded usage.
+ * 
+ * Features:
+ * - Responsive design with consistent branding
+ * - Automatic iframe height adjustment via postMessage
+ * - ResizeObserver for dynamic content changes
+ * - Accessible navigation controls
+ * 
+ * @param props - TopBar component props
+ * @returns JSX element representing the application header
+ * 
+ * @example
+ * ```tsx
+ * <TopBar showBackButton onBack={() => router.back()}>
+ *   <UserMenu />
+ * </TopBar>
+ * ```
+ * 
+ * AI-OPTIMIZE: Consider memoizing this component if parent re-renders frequently
+ */
+export function TopBar({ showBackButton = false, onBack, children }: TopBarProps): React.JSX.Element {
+  /**
+   * Handle iframe height adjustments for embedded usage
+   * @description Sets up automatic height adjustment when component is rendered in iframe.
+   * Uses ResizeObserver to detect content changes and postMessage to communicate with parent.
+   * 
+   * AI-OPTIMIZE: Consider throttling resize events for better performance
+   */
   useEffect(() => {
-    const adjustHeight = () => {
+    /**
+     * Adjusts iframe height by posting message to parent window
+     */
+    const adjustHeight = (): void => {
       if (window.parent !== window) {
-        // We're in an iframe
+        // We're in an iframe - calculate and send height to parent
         const height = document.body.scrollHeight;
         window.parent.postMessage(
           {
             type: 'resize',
             height: height,
           },
-          '*'
+          '*' // AI-NOTE: In production, specify exact parent origin for security
         );
       }
     };
 
-    // Initial adjustment
+    // Initial height adjustment on component mount
     adjustHeight();
 
     // Set up ResizeObserver for dynamic content changes
     const resizeObserver = new ResizeObserver(() => {
-      // Debounce the height adjustment
+      // Debounce the height adjustment to prevent excessive calls
       setTimeout(adjustHeight, 100);
     });
 
+    // Observe document body for size changes
     resizeObserver.observe(document.body);
 
+    // Cleanup observer on component unmount
     return () => {
       resizeObserver.disconnect();
     };

@@ -1,16 +1,58 @@
+/**
+ * @fileoverview Validation utilities for EasyCal application
+ * @description Provides comprehensive validation functions for user inputs,
+ * CSV data, brand configurations, and API payloads.
+ * @author AI Assistant
+ */
+
 import { BrandConfig, CSVCalendarRow, ValidationError, ScheduleBlock } from '@/types/brand';
 
-// Color validation
+/**
+ * Validates hex color format
+ * @param color - Color string to validate
+ * @returns True if color is valid 6-digit hex format (#RRGGBB)
+ * 
+ * @example
+ * ```typescript
+ * validateColor('#FF0000') // true
+ * validateColor('#ff0000') // true  
+ * validateColor('#F00')    // false (too short)
+ * validateColor('red')     // false (not hex)
+ * ```
+ */
 export function validateColor(color: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(color);
 }
 
-// Button text validation
+/**
+ * Validates button text length and content
+ * @param text - Button text to validate
+ * @returns True if text is between 3-30 characters
+ * 
+ * @example
+ * ```typescript
+ * validateButtonText('Book Now')     // true
+ * validateButtonText('Hi')          // false (too short)
+ * validateButtonText('Very long button text that exceeds limit') // false (too long)
+ * ```
+ */
 export function validateButtonText(text: string): boolean {
   return text.length >= 3 && text.length <= 30;
 }
 
-// Timezone validation (basic IANA format check)
+/**
+ * Validates IANA timezone format using browser API
+ * @param timezone - Timezone string to validate (e.g., 'America/New_York')
+ * @returns True if timezone is valid IANA format
+ * 
+ * @example
+ * ```typescript
+ * validateTimezone('America/New_York')  // true
+ * validateTimezone('Europe/London')     // true
+ * validateTimezone('Invalid/Zone')      // false
+ * validateTimezone('EST')               // false (not IANA format)
+ * ```
+ */
 export function validateTimezone(timezone: string): boolean {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: timezone });
@@ -20,7 +62,22 @@ export function validateTimezone(timezone: string): boolean {
   }
 }
 
-// Validate Brand Config
+/**
+ * Validates brand configuration object
+ * @param config - Partial brand configuration to validate
+ * @returns Array of validation error messages (empty if valid)
+ * 
+ * @example
+ * ```typescript
+ * const config = {
+ *   locationId: 'loc123',
+ *   primaryColorHex: '#FF0000',
+ *   backgroundColorHex: '#FFFFFF',
+ *   defaultButtonText: 'Book Now'
+ * };
+ * const errors = validateBrandConfig(config); // []
+ * ```
+ */
 export function validateBrandConfig(config: Partial<BrandConfig>): string[] {
   const errors: string[] = [];
   
@@ -73,9 +130,9 @@ export function parseScheduleBlocks(scheduleStr: string): ScheduleBlock[] {
     
     if (match) {
       const [, dayToken, start, end] = match;
-      const normalizedDay = dayMap[dayToken.toLowerCase()];
+      const normalizedDay = dayToken ? dayMap[dayToken.toLowerCase()] : undefined;
       
-      if (normalizedDay && isValidTime(start) && isValidTime(end)) {
+      if (normalizedDay && start && end && isValidTime(start) && isValidTime(end)) {
         blocks.push({
           day: normalizedDay,
           start,
@@ -88,13 +145,17 @@ export function parseScheduleBlocks(scheduleStr: string): ScheduleBlock[] {
   return blocks;
 }
 
-// Validate time format (HH:MM)
-function isValidTime(time: string): boolean {
+/**
+ * Validates time format (HH:MM)
+ * @param time - Time string to validate
+ * @returns True if time is valid 24-hour format
+ */
+export function isValidTime(time: string): boolean {
   const match = time.match(/^(\d{2}):(\d{2})$/);
   if (!match) return false;
   
-  const hours = parseInt(match[1]);
-  const minutes = parseInt(match[2]);
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
   
   return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
 }

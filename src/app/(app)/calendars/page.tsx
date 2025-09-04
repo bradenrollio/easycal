@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Trash2, MoreHorizontal, CheckSquare, Square } from 'lucide-react';
-import { getLocationId } from '@/lib/ghl-context';
+import { getLocationId } from '@/lib/api/ghl/context';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/TopBar';
 
@@ -289,7 +289,14 @@ function CalendarsContent() {
           </table>
         </div>
 
-        {filteredCalendars.length === 0 && (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="flex items-center justify-center mb-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-navy"></div>
+            </div>
+            <div className="text-muted-foreground">Loading calendars...</div>
+          </div>
+        ) : filteredCalendars.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-muted-foreground mb-2">
               {searchQuery ? 'No calendars match your search.' : 'No calendars found.'}
@@ -298,7 +305,7 @@ function CalendarsContent() {
               <a href="/import">Import Calendars</a>
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Bulk Delete Confirmation Modal */}

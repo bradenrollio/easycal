@@ -51,7 +51,7 @@ export function UploadDropzone({
     setIsDragOver(false);
 
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
+    if (files.length > 0 && files[0]) {
       handleFileSelect(files[0]);
     }
   }, [handleFileSelect]);
@@ -68,7 +68,7 @@ export function UploadDropzone({
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
+    if (files && files.length > 0 && files[0]) {
       handleFileSelect(files[0]);
     }
   }, [handleFileSelect]);

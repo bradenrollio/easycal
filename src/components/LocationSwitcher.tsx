@@ -54,7 +54,7 @@ export function LocationSwitcher({
     return (
       <div className="flex items-center space-x-2 text-sm">
         <MapPin className="h-4 w-4 text-brand-navy" />
-        <span className="font-medium">{locations[0].name}</span>
+        <span className="font-medium">{locations[0]?.name || 'Unknown Location'}</span>
       </div>
     );
   }

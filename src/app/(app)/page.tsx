@@ -4,12 +4,12 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Upload, Trash2, Settings } from 'lucide-react';
-import { getLocationId } from '@/lib/ghl-context';
+import { getLocationId } from '@/lib/api/ghl/context';
 
 function DashboardContent() {
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams(); // Available if needed
   const [metrics, setMetrics] = useState({
-    liveCalendars: 0,
+    activeCalendars: 0,
     createdToday: 0,
     importsInProgress: 0
   });
@@ -71,19 +71,19 @@ function DashboardContent() {
         const calendarsData = await calendarsResponse.json();
         const calendars = calendarsData.calendars || [];
         
-        // Calculate live calendars
-        const liveCalendars = calendars.filter(cal => cal.isActive).length;
+        // Calculate active calendars (changed from liveCalendars)
+        const activeCalendars = calendars.filter((cal: any) => cal.isActive).length;
         
         // Calculate created today
         const today = new Date().toDateString();
-        const createdToday = calendars.filter(cal => {
+        const createdToday = calendars.filter((cal: any) => {
           const createdDate = new Date(cal.createdAt || cal.createdDate).toDateString();
           return createdDate === today;
         }).length;
         
         setMetrics(prev => ({
           ...prev,
-          liveCalendars,
+          activeCalendars,
           createdToday
         }));
       }
@@ -223,9 +223,13 @@ function DashboardContent() {
       <div className="mt-12 grid gap-4 md:grid-cols-3 max-w-4xl">
         <div className="bg-white rounded-lg p-4 card-shadow border border-border">
           <div className="text-2xl font-bold text-brand-navy">
-            {isLoading ? '—' : metrics.liveCalendars}
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-navy"></div>
+              </div>
+            ) : metrics.activeCalendars}
           </div>
-          <div className="text-sm text-muted-foreground">Live Calendars</div>
+          <div className="text-sm text-muted-foreground">Active Calendars</div>
         </div>
         <div className="bg-white rounded-lg p-4 card-shadow border border-border">
           <div className="text-2xl font-bold text-green-600">

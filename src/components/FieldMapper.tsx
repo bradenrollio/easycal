@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { clsx } from 'clsx';
-import { Button } from '@/components/ui/button';
 
 interface CSVColumn {
   name: string;

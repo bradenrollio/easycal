@@ -79,7 +79,7 @@ export async function decrypt(encryptedBase64: string, key: CryptoKey): Promise<
  * Get encryption key from environment
  */
 export async function getEncryptionKey(): Promise<CryptoKey> {
-  const keyBase64 = process.env.ENCRYPTION_KEY;
+  const keyBase64 = process.env['ENCRYPTION_KEY'];
   if (!keyBase64) {
     throw new Error('ENCRYPTION_KEY environment variable is required');
   }

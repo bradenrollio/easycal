@@ -2,8 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Save, Settings as SettingsIcon, Palette } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Settings as SettingsIcon, Palette } from 'lucide-react';
 import { TopBar } from '@/components/TopBar';
 import { BrandConfigComponent } from '@/components/BrandConfig';
 import { CalendarDefaultsComponent } from '@/components/CalendarDefaults';

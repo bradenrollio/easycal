@@ -1,5 +1,5 @@
-import { BrandConfig, CSVCalendarRow, CalendarPayload, ScheduleBlock, CalendarDefaults } from '@/types/brand';
-import { parseScheduleBlocks, slugify, applyBranding as applyBrandingHelper } from './helpers';
+import { BrandConfig, CSVCalendarRow, CalendarPayload, CalendarDefaults } from '@/types/brand';
+import { parseScheduleBlocks, slugify } from '../utils/validation';
 
 // Apply branding rules with precedence
 export function applyBranding(
@@ -8,13 +8,17 @@ export function applyBranding(
   defaults?: CalendarDefaults,
   locationTz?: string
 ): { primaryColor: string; backgroundColor: string; buttonText: string; timezone: string } {
-  const result = applyBrandingHelper(row, brandConfig, defaults, locationTz);
+  const result = {
+    primaryColorHex: row.primary_color_hex || brandConfig.primaryColorHex,
+    backgroundColorHex: row.background_color_hex || brandConfig.backgroundColorHex,
+    buttonText: row.button_text || brandConfig.defaultButtonText,
+  };
   
   return {
-    primaryColor: result.primary,
-    backgroundColor: result.background,
-    buttonText: result.button,
-    timezone: result.timezone
+    primaryColor: result.primaryColorHex,
+    backgroundColor: result.backgroundColorHex,
+    buttonText: result.buttonText,
+    timezone: locationTz || brandConfig.defaultTimezone || 'UTC'
   };
 }
 

@@ -23,7 +23,7 @@ export default function DebugPage() {
       console.log('API Response:', data);
     } catch (error) {
       setResult({
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         locationId: locationId
       });
     } finally {

@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CheckCircle, AlertTriangle, XCircle, Palette, Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, Calendar, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CSVCalendarRow, BrandConfig, CalendarDefaults, ValidationError, CalendarPayload } from '@/types/brand';
-import { validateCSVRow } from '@/lib/validators';
-import { buildCalendarPayload, applyBranding } from '@/lib/branding';
+import { validateCSVRow } from '@/lib/utils/validation';
+import { buildCalendarPayload, applyBranding } from '@/lib/constants/branding';
 
 interface DryRunPreviewProps {
   csvRows: CSVCalendarRow[];
@@ -65,11 +65,11 @@ export function DryRunPreview({ csvRows, brandConfig, defaults, onProceed, onBac
         processed.push({
           index: i,
           row,
-          payload: null,
+          payload: null as any,
           errors: [...errors, {
             row: i,
             field: 'general',
-            message: `Failed to build payload: ${error.message}`,
+            message: `Failed to build payload: ${error instanceof Error ? error.message : 'Unknown error'}`,
             severity: 'error'
           }],
           warnings,

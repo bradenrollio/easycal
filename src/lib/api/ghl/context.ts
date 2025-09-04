@@ -88,7 +88,7 @@ export function parseGHLLocationFromURL(): string | null {
       if (locationMatch) {
         const ghlLocationId = locationMatch[1];
         console.log('Extracted location ID from GHL URL pattern:', ghlLocationId);
-        return ghlLocationId;
+        return ghlLocationId ?? null;
       }
     }
   } catch (error) {
@@ -260,10 +260,10 @@ export async function getEnhancedGHLContext(): Promise<EnhancedGHLContext | null
   if (companyId || userTypeParam === 'agency') {
     return {
       ...basicContext,
-      companyId: companyId || basicContext?.companyId,
-      userType: 'Company',
+      companyId: companyId || basicContext?.companyId || '',
+      userType: 'Company' as const,
       isAgencyInstall: true,
-      locationId: basicContext?.locationId || 'agency_' + (companyId || basicContext?.companyId)
+      locationId: basicContext?.locationId || `agency_${companyId || basicContext?.companyId || 'unknown'}`
     };
   }
   

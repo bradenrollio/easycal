@@ -67,10 +67,10 @@ export class GoHighLevelClient {
 
   private initializeClient() {
     this.client = new HighLevel({
-      clientId: this.options.clientId || process.env.HL_CLIENT_ID,
-      clientSecret: this.options.clientSecret || process.env.HL_CLIENT_SECRET,
-      privateIntegrationToken: this.options.privateIntegrationToken || process.env.HL_PIT,
-    });
+      clientId: this.options.clientId || process.env['HL_CLIENT_ID'] || '',
+      clientSecret: this.options.clientSecret || process.env['HL_CLIENT_SECRET'] || '',
+      privateIntegrationToken: this.options.privateIntegrationToken || process.env['HL_PIT'] || '',
+    } as any);
 
     if (this.options.accessToken) {
       this.client.setAccessToken(this.options.accessToken);
@@ -179,8 +179,8 @@ export class GoHighLevelClient {
       // Notify callback if provided
       if (this.options.onTokenRefresh) {
         await this.options.onTokenRefresh({
-          accessToken: this.accessToken,
-          refreshToken: this.refreshToken,
+          accessToken: this.accessToken || '',
+          refreshToken: this.refreshToken || '',
           expiresAt: this.tokenExpiry,
         });
       }
@@ -269,8 +269,8 @@ export class GoHighLevelClient {
     const baseUrl = 'https://services.leadconnectorhq.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/authorize';
     const params = new URLSearchParams({
       response_type: 'code',
-      client_id: this.options.clientId || process.env.HL_CLIENT_ID!,
-      redirect_uri: `${process.env.APP_BASE_URL}/auth/callback`,
+      client_id: this.options.clientId || process.env['HL_CLIENT_ID'] || '',
+      redirect_uri: `${process.env['APP_BASE_URL']}/auth/callback`,
       scope: scopes.join(' '),
       ...(state && { state }),
     });
@@ -285,7 +285,7 @@ export class GoHighLevelClient {
     return this.executeRequest(() =>
       this.client.oauth.token({
         code,
-        redirect_uri: `${process.env.APP_BASE_URL}/auth/callback`,
+        redirect_uri: `${process.env['APP_BASE_URL']}/auth/callback`,
       })
     );
   }

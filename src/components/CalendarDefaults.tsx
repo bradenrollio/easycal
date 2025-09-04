@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { Save, Settings, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CalendarDefaults } from '@/types/brand';
-import { validateTimezone } from '@/lib/validators';
-import { getCommonTimezones } from '@/lib/helpers';
+import { validateTimezone } from '@/lib/utils/validation';
+import { getCommonTimezones } from '@/lib/utils/formatting';
 
 interface CalendarDefaultsProps {
   locationId: string;

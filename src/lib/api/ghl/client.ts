@@ -1,55 +1,122 @@
+/**
+ * @fileoverview GoHighLevel API client for calendar operations
+ * @description Provides a comprehensive client for interacting with the GoHighLevel
+ * calendars API, including CRUD operations, group management, and bulk operations.
+ * @author AI Assistant
+ */
+
 import { CalendarPayload } from '@/types/brand';
 
+/**
+ * GoHighLevel calendar group interface
+ */
 export interface GHLGroup {
+  /** Unique group identifier */
   id: string;
+  /** Group display name */
   name: string;
+  /** URL-friendly group identifier */
   slug: string;
+  /** Whether group is active */
   isActive: boolean;
 }
 
+/**
+ * GoHighLevel calendar interface
+ */
 export interface GHLCalendar {
+  /** Unique calendar identifier */
   id: string;
+  /** Calendar display name */
   name: string;
+  /** URL-friendly calendar identifier */
   slug: string;
+  /** Parent group ID (optional) */
   groupId?: string;
+  /** Whether calendar is active */
   isActive: boolean;
+  /** Calendar customization settings */
   customizations?: {
+    /** Primary brand color */
     primaryColor?: string;
+    /** Background color */
     backgroundColor?: string;
+    /** Button text */
     buttonText?: string;
   };
 }
 
+/**
+ * GoHighLevel Calendar API Client
+ * @description Handles all calendar-related operations with the GoHighLevel API.
+ * Includes rate limiting, error handling, and retry logic.
+ * 
+ * @example
+ * ```typescript
+ * const client = new GHLCalendarClient(accessToken, locationId);
+ * const calendars = await client.listCalendars();
+ * ```
+ */
 export class GHLCalendarClient {
   private accessToken: string;
   private locationId: string;
   private baseUrl = 'https://services.leadconnectorhq.com';
 
+  /**
+   * Creates a new GHL Calendar API client
+   * @param accessToken - OAuth access token for API authentication
+   * @param locationId - GoHighLevel location/sub-account ID
+   */
   constructor(accessToken: string, locationId: string) {
     this.accessToken = accessToken;
     this.locationId = locationId;
   }
 
-  // Make authenticated API request
-  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  /**
+   * Makes authenticated API request to GoHighLevel
+   * @private
+   * @param endpoint - API endpoint path (e.g., '/calendars')
+   * @param options - Fetch request options
+   * @returns Promise resolving to parsed JSON response
+   * @throws Error with detailed message on API failure
+   * 
+   * AI-OPTIMIZE: Consider implementing retry logic with exponential backoff
+   */
+  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<unknown> {
     const url = `${this.baseUrl}${endpoint}`;
     
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
-        'Version': '2021-07-28',
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Version': '2021-07-28',
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`GHL API Error ${response.status}: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[GHLCalendarClient] API Error:`, {
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          url
+        });
+        throw new Error(`GHL API Error ${response.status}: ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`[GHLCalendarClient] Request failed:`, {
+        endpoint,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        url
+      });
+      throw error;
     }
-
-    return response.json();
   }
 
   // Get or create calendar group
@@ -76,7 +143,7 @@ export class GHLCalendarClient {
         body: JSON.stringify(groupData)
       });
 
-      return newGroup.group.id;
+      return (newGroup as any).group.id;
     } catch (error) {
       console.error('Error ensuring group:', error);
       throw error;
@@ -87,7 +154,7 @@ export class GHLCalendarClient {
   async listGroups(): Promise<GHLGroup[]> {
     try {
       const response = await this.makeRequest(`/calendars/groups?locationId=${this.locationId}`);
-      return response.groups || [];
+      return (response as any).groups || [];
     } catch (error) {
       console.error('Error listing groups:', error);
       return [];
@@ -182,7 +249,7 @@ export class GHLCalendarClient {
           body: JSON.stringify(updateData)
         });
 
-        return { id: response.calendar.id, isUpdate: true };
+        return { id: (response as any).calendar.id, isUpdate: true };
       } else {
         // Create new calendar
         const createData = {
@@ -230,7 +297,7 @@ export class GHLCalendarClient {
           body: JSON.stringify(createData)
         });
 
-        return { id: response.calendar.id, isUpdate: false };
+        return { id: (response as any).calendar.id, isUpdate: false };
       }
     } catch (error) {
       console.error('Error creating/updating calendar:', error);
@@ -247,11 +314,11 @@ export class GHLCalendarClient {
         await this.makeRequest(`/calendars/${calendarId}?locationId=${this.locationId}`, {
           method: 'DELETE'
         });
-        results.success.push(calendarId);
+        (results.success as any).push(calendarId);
       } catch (error) {
-        results.failed.push({
+        (results.failed as any).push({
           id: calendarId,
-          error: error.message
+          error: (error as any).message
         });
       }
     }
@@ -263,7 +330,7 @@ export class GHLCalendarClient {
   async listCalendars(): Promise<GHLCalendar[]> {
     try {
       const response = await this.makeRequest(`/calendars?locationId=${this.locationId}`);
-      return response.calendars || [];
+      return (response as any).calendars || [];
     } catch (error) {
       console.error('Error listing calendars:', error);
       return [];

@@ -171,7 +171,7 @@ function ImportContent() {
 
     } catch (error) {
       console.error('Import failed:', error);
-      alert(`Import failed: ${error.message}`);
+      alert(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setCurrentStep('preview');
     } finally {
       setIsLoading(false);
@@ -294,7 +294,7 @@ function ImportContent() {
     );
   };
 
-  const renderOldReviewStep = () => {
+  const _renderOldReviewStep = () => { // Keeping for reference
     // Generate preview of first few rows with mappings
     const previewRows = csvData.slice(0, 5).map((row, index) => {
       const mappedData: Record<string, string> = {};
@@ -337,7 +337,8 @@ function ImportContent() {
             <div>
               <div className="text-2xl font-bold text-blue-600">
                 {csvData.filter(row => {
-                  const name = row[csvColumns[fieldMappings.calendar_name || 0]?.name || ''];
+                  const columnName = csvColumns[fieldMappings['calendar_name'] || 0]?.name || '';
+                  const name = row[columnName];
                   return name && name.trim() !== '';
                 }).length}
               </div>
@@ -346,7 +347,8 @@ function ImportContent() {
             <div>
               <div className="text-2xl font-bold text-orange-600">
                 {csvData.length - csvData.filter(row => {
-                  const name = row[csvColumns[fieldMappings.calendar_name || 0]?.name || ''];
+                  const columnName = csvColumns[fieldMappings['calendar_name'] || 0]?.name || '';
+                  const name = row[columnName];
                   return name && name.trim() !== '';
                 }).length}
               </div>
