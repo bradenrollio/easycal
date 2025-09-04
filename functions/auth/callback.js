@@ -5,9 +5,16 @@ export async function onRequest(context) {
     const url = new URL(request.url);
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
+    const locationId = url.searchParams.get('locationId'); // GHL might pass this in callback
+    const companyId = url.searchParams.get('companyId'); // Or this for agency installs
     
-    console.log('Callback received with code:', code ? 'present' : 'missing');
-    console.log('State:', state);
+    console.log('OAuth callback received:', {
+      code: code ? 'present' : 'missing',
+      state: state,
+      locationId: locationId,
+      companyId: companyId,
+      fullURL: request.url
+    });
     
     if (!code) {
       return new Response(`
@@ -195,22 +202,42 @@ async function completeInstallation(tokenData, env) {
     console.log('Token scopes:', scopes);
     console.log('Token data keys:', Object.keys(tokenData));
     
-    // For GHL marketplace apps, the location_id should be in the token response
-    // Based on user confirmation, the actual location ID is HgTZdA5INm0uiGh9KvHC
-    // Let's check if it's in the token data, otherwise use the known correct ID
-    let locationId = tokenData.location_id || tokenData.locationId || tokenData.companyId;
+    // For GHL marketplace apps, the location_id can come from multiple sources:
+    // 1. OAuth callback URL parameters (locationId, companyId)
+    // 2. Token response data
+    // 3. For agency installs, we need to handle multiple locations
     
-    // If no location ID found in token, use the confirmed correct location ID
-    if (!locationId || locationId.startsWith('temp_')) {
-      locationId = 'HgTZdA5INm0uiGh9KvHC'; // User-confirmed correct location ID
-      console.log('Using confirmed correct location ID:', locationId);
+    let extractedLocationId = 
+      locationId ||  // From callback URL
+      companyId ||   // From callback URL (agency)
+      tokenData.location_id || 
+      tokenData.locationId || 
+      tokenData.companyId ||
+      tokenData.sub; // Sometimes location ID is in 'sub' field
+    
+    console.log('Location ID extraction results:', {
+      fromCallbackURL: locationId,
+      fromCompanyId: companyId,
+      fromTokenData: {
+        location_id: tokenData.location_id,
+        locationId: tokenData.locationId,
+        companyId: tokenData.companyId,
+        sub: tokenData.sub
+      },
+      finalExtracted: extractedLocationId
+    });
+    
+    // If still no location ID found, this is an issue
+    if (!extractedLocationId || extractedLocationId.startsWith('temp_')) {
+      console.error('No valid location ID found in OAuth flow!');
+      extractedLocationId = `unknown_${Date.now()}`; // Create a unique ID for debugging
     }
     
     const locationName = tokenData.name || tokenData.companyName || tokenData.businessName || 'New Installation';
     const isAgencyInstall = scopes.includes('oauth.readonly') && scopes.includes('oauth.write');
     
     console.log('Extracted location info:', {
-      locationId,
+      locationId: extractedLocationId,
       locationName,
       isAgencyInstall,
       tokenDataKeys: Object.keys(tokenData),
@@ -252,7 +279,7 @@ async function completeInstallation(tokenData, env) {
 
     // Create location record
     const locationData = {
-      id: locationId,
+      id: extractedLocationId,
       tenantId: tenantId,
       name: locationName,
       timeZone: tokenData.timezone || 'America/New_York',
@@ -284,7 +311,7 @@ async function completeInstallation(tokenData, env) {
     `).bind(
       tokenId,
       tenantId,
-      locationId,
+      extractedLocationId, // Use the properly extracted location ID
       encryptedTokens.accessToken,
       encryptedTokens.refreshToken,
       tokenData.scope,
@@ -295,7 +322,7 @@ async function completeInstallation(tokenData, env) {
 
     return {
       success: true,
-      locationId: locationId,
+      locationId: extractedLocationId,
       locationName: locationName,
       tenantId: tenantId
     };
