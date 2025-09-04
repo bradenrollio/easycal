@@ -143,6 +143,8 @@ async function decryptToken(encryptedToken, encryptionKey) {
 // Handle listing calendars
 async function handleListCalendars(accessToken, locationId, corsHeaders) {
   try {
+    console.log('Making GHL API call to list calendars for location:', locationId);
+    
     const response = await fetch(`https://services.leadconnectorhq.com/calendars?locationId=${locationId}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -150,6 +152,9 @@ async function handleListCalendars(accessToken, locationId, corsHeaders) {
         'Content-Type': 'application/json'
       }
     });
+    
+    console.log('GHL API response status:', response.status);
+    console.log('GHL API response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();

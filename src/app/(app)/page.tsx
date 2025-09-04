@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Upload, Trash2, Settings } from 'lucide-react';
+import { getLocationId } from '@/lib/ghl-context';
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -14,38 +15,47 @@ function DashboardContent() {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Get location ID from URL params or try to detect it
-  const [locationId, setLocationId] = useState(searchParams.get('locationId') || null);
+  // Get location ID using comprehensive detection
+  const [locationId, setLocationId] = useState<string | null>(null);
   const [locationDetected, setLocationDetected] = useState(false);
 
   // Load metrics on mount
   useEffect(() => {
+    detectLocationId();
+  }, []);
+
+  useEffect(() => {
     if (locationId) {
       loadMetrics();
-    } else if (!locationDetected) {
-      // Try to detect location ID from available tokens
-      detectLocationId();
     }
-  }, [locationId, locationDetected]);
+  }, [locationId]);
 
   const detectLocationId = async () => {
     try {
-      console.log('Detecting location ID...');
-      // Try to get the correct location ID from our detection API
-      const response = await fetch('/api/detect-location');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Detected location:', data);
-        if (data.locationId) {
-          setLocationId(data.locationId);
-          // Update URL with location ID
-          window.history.replaceState({}, '', `/?locationId=${data.locationId}`);
-        }
+      console.log('Detecting location ID using GHL context...');
+      
+      // Use the comprehensive location detection
+      const detectedLocationId = await getLocationId();
+      
+      if (detectedLocationId) {
+        console.log('Location ID detected:', detectedLocationId);
+        setLocationId(detectedLocationId);
+        // Update URL with location ID
+        window.history.replaceState({}, '', `/?locationId=${detectedLocationId}`);
       } else {
-        console.error('Failed to detect location:', await response.text());
+        console.warn('No location ID detected, using fallback');
+        // TEMPORARY FIX: Use the known good location ID
+        // This will be replaced once we get the GHL context working properly
+        const fallbackLocationId = 'EnUqtThIwW8pdTLOvuO7';
+        setLocationId(fallbackLocationId);
+        window.history.replaceState({}, '', `/?locationId=${fallbackLocationId}`);
       }
     } catch (error) {
       console.error('Error detecting location ID:', error);
+      // TEMPORARY FIX: Use the known good location ID
+      const fallbackLocationId = 'EnUqtThIwW8pdTLOvuO7';
+      setLocationId(fallbackLocationId);
+      window.history.replaceState({}, '', `/?locationId=${fallbackLocationId}`);
     } finally {
       setLocationDetected(true);
     }

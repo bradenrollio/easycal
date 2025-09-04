@@ -14,13 +14,15 @@ export async function onRequest(context) {
   }
   
   try {
-    // Get the most recent location with a valid token
+    // Get the most recent location with a valid token, prioritizing real GHL location IDs
     const result = await env.DB.prepare(`
       SELECT l.id, l.name, l.time_zone, t.expires_at
       FROM locations l
       JOIN tokens t ON l.id = t.location_id
       WHERE l.is_enabled = 1 AND t.expires_at > ?
-      ORDER BY t.expires_at DESC
+      ORDER BY 
+        CASE WHEN l.id LIKE 'temp_%' THEN 1 ELSE 0 END,
+        t.expires_at DESC
       LIMIT 1
     `).bind(Math.floor(Date.now() / 1000)).first();
     
