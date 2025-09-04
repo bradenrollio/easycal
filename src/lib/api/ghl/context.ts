@@ -1,4 +1,4 @@
-// GHL Context - Get location context from parent GHL interface
+// Location Context - Get location context from parent interface
 export interface GHLContext {
   locationId: string;
   userId?: string;
@@ -9,7 +9,7 @@ export interface GHLContext {
 
 export function getGHLContext(): Promise<GHLContext | null> {
   return new Promise((resolve) => {
-    // Check if we're in an iframe (GHL context)
+    // Check if we're in an iframe (parent context)
     const isInIframe = window !== window.parent;
     
     if (!isInIframe) {
@@ -18,14 +18,14 @@ export function getGHLContext(): Promise<GHLContext | null> {
       return;
     }
 
-    // Listen for GHL context message
+    // Listen for context message
     const handleMessage = (event: MessageEvent) => {
       // Ensure message is from GHL domain
       if (!event.origin.includes('gohighlevel.com') && !event.origin.includes('leadconnectorhq.com')) {
         return;
       }
 
-      console.log('Received message from GHL:', event.data);
+      console.log('Received message from parent:', event.data);
 
       if (event.data && event.data.type === 'ghl-context') {
         window.removeEventListener('message', handleMessage);
@@ -54,7 +54,7 @@ export function getGHLContext(): Promise<GHLContext | null> {
   });
 }
 
-// Alternative: Parse location from URL hash or search params that GHL might set
+// Alternative: Parse location from URL hash or search params
 export function parseGHLLocationFromURL(): string | null {
   // Check URL hash
   const hash = window.location.hash;
@@ -87,7 +87,7 @@ export function parseGHLLocationFromURL(): string | null {
       const locationMatch = parentUrl.match(/\/v2\/location\/([^\/]+)\/custom-page-link/);
       if (locationMatch) {
         const ghlLocationId = locationMatch[1];
-        console.log('Extracted location ID from GHL URL pattern:', ghlLocationId);
+        console.log('Extracted location ID from URL pattern:', ghlLocationId);
         return ghlLocationId ?? null;
       }
     }
@@ -99,25 +99,25 @@ export function parseGHLLocationFromURL(): string | null {
   return null;
 }
 
-// Get location ID from GHL iframe context using postMessage
+// Get location ID from iframe context using postMessage
 export function getGHLLocationFromIframe(): Promise<string | null> {
   return new Promise((resolve) => {
     // Check if we're in an iframe
     const isInIframe = window !== window.parent;
     
     if (!isInIframe) {
-      console.log('Not in iframe, cannot get GHL context');
+      console.log('Not in iframe, cannot get context');
       resolve(null);
       return;
     }
 
-    console.log('In iframe - attempting to get location from GHL parent');
+    console.log('In iframe - attempting to get location from parent');
     let resolved = false;
 
     const handleMessage = (event: MessageEvent) => {
       if (resolved) return;
       
-      console.log('Received message from GHL parent:', {
+      console.log('Received message from parent:', {
         origin: event.origin,
         data: event.data,
         type: typeof event.data
@@ -135,7 +135,7 @@ export function getGHLLocationFromIframe(): Promise<string | null> {
         if (locationId && typeof locationId === 'string' && locationId.length > 5) {
           resolved = true;
           window.removeEventListener('message', handleMessage);
-          console.log('Location ID extracted from GHL iframe:', locationId);
+          console.log('Location ID extracted from iframe:', locationId);
           resolve(locationId);
         }
       }
@@ -176,7 +176,7 @@ export function getGHLLocationFromIframe(): Promise<string | null> {
       }, 1000);
       
     } catch (error) {
-      console.warn('Could not send message to GHL parent:', error);
+      console.warn('Could not send message to parent:', error);
     }
 
     // Timeout after 3 seconds
@@ -184,7 +184,7 @@ export function getGHLLocationFromIframe(): Promise<string | null> {
       if (!resolved) {
         resolved = true;
         window.removeEventListener('message', handleMessage);
-        console.log('Timeout waiting for GHL location context');
+        console.log('Timeout waiting for location context');
         resolve(null);
       }
     }, 3000);
@@ -219,7 +219,7 @@ export async function getLocationId(): Promise<string | null> {
   // 3. Try to get from GHL context (alternative method)
   const ghlContext = await getGHLContext();
   if (ghlContext && ghlContext.locationId) {
-    console.log('Location ID from GHL context:', ghlContext.locationId);
+    console.log('Location ID from context:', ghlContext.locationId);
     return ghlContext.locationId;
   }
 
@@ -247,7 +247,7 @@ export async function getLocationId(): Promise<string | null> {
 
 // Get enhanced context that handles both agency and location installs
 export async function getEnhancedGHLContext(): Promise<EnhancedGHLContext | null> {
-  console.log('Getting enhanced GHL context...');
+  console.log('Getting enhanced context...');
   
   // First try to get basic context
   const basicContext = await getGHLContext();
