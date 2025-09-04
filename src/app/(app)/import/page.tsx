@@ -30,10 +30,12 @@ export default function ImportPage() {
   const [fieldMappings, setFieldMappings] = useState<Record<string, number | null>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [brandConfig, setBrandConfig] = useState(null);
+  const [defaults, setDefaults] = useState(null);
 
-  // Load brand config on mount
+  // Load brand config and defaults on mount
   useEffect(() => {
     loadBrandConfig();
+    loadDefaults();
   }, []);
 
   const loadBrandConfig = async () => {
@@ -45,6 +47,18 @@ export default function ImportPage() {
       }
     } catch (error) {
       console.error('Error loading brand config:', error);
+    }
+  };
+
+  const loadDefaults = async () => {
+    try {
+      const response = await fetch('/api/settings/defaults?locationId=loc1'); // TODO: Get from context
+      if (response.ok) {
+        const defaultsData = await response.json();
+        setDefaults(defaultsData);
+      }
+    } catch (error) {
+      console.error('Error loading defaults:', error);
     }
   };
 
@@ -155,8 +169,8 @@ export default function ImportPage() {
           {' '}with all required fields for your calendars.
         </p>
         <div className="text-xs text-muted-foreground mt-2">
-          <strong>Required fields:</strong> calendar_type, calendar_name, day_of_week, time_of_week, slot_interval, class_duration, min_scheduling_notice, max_bookings_per_day<br/>
-          <strong>Optional fields:</strong> spots_per_booking, class_description, calendar_group, custom_url, button_text, primary_color_hex, background_color_hex, schedule_blocks
+          <strong>Required fields:</strong> calendar_type, calendar_name, slot_interval_minutes, class_duration_minutes, min_scheduling_notice_days, max_bookings_per_day, schedule_blocks<br/>
+          <strong>Optional fields:</strong> calendar_group, class_description, custom_url, button_text, primary_color_hex, background_color_hex, calendar_purpose
         </div>
       </div>
     </div>
@@ -204,11 +218,11 @@ export default function ImportPage() {
   );
 
   const renderPreviewStep = () => {
-    if (!brandConfig) {
+    if (!brandConfig || !defaults) {
       return (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading brand configuration...</p>
+          <p className="text-muted-foreground">Loading configuration...</p>
         </div>
       );
     }
@@ -231,6 +245,7 @@ export default function ImportPage() {
       <DryRunPreview
         csvRows={calendarRows}
         brandConfig={brandConfig}
+        defaults={defaults}
         onProceed={handleStartImport}
         onBack={() => setCurrentStep('map')}
       />

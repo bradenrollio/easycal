@@ -1,4 +1,4 @@
-// Brand Config API - GET and POST
+// Calendar Defaults API - GET and POST
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -16,9 +16,9 @@ export async function onRequest(context) {
   
   try {
     if (request.method === 'GET') {
-      return handleGetBrandConfig(url, env, corsHeaders);
+      return handleGetDefaults(url, env, corsHeaders);
     } else if (request.method === 'POST') {
-      return handlePostBrandConfig(request, env, corsHeaders);
+      return handlePostDefaults(request, env, corsHeaders);
     } else {
       return new Response('Method not allowed', { 
         status: 405, 
@@ -26,7 +26,7 @@ export async function onRequest(context) {
       });
     }
   } catch (error) {
-    console.error('Brand Config API error:', error);
+    console.error('Defaults API error:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       message: error.message 
@@ -37,7 +37,7 @@ export async function onRequest(context) {
   }
 }
 
-async function handleGetBrandConfig(url, env, corsHeaders) {
+async function handleGetDefaults(url, env, corsHeaders) {
   const locationId = url.searchParams.get('locationId');
   
   if (!locationId) {
@@ -49,39 +49,39 @@ async function handleGetBrandConfig(url, env, corsHeaders) {
     });
   }
   
-  // Get brand config from KV
-  const kvKey = `location:${locationId}:brand`;
-  const configStr = await env.EASYCAL_SESSIONS.get(kvKey);
+  // Get defaults from KV
+  const kvKey = `location:${locationId}:defaults`;
+  const defaultsStr = await env.EASYCAL_SESSIONS.get(kvKey);
   
-  if (!configStr) {
-    // Return default brand config
-    const defaultConfig = {
+  if (!defaultsStr) {
+    // Return default calendar defaults
+    const defaultDefaults = {
       locationId,
-      primaryColorHex: '#FFC300',
-      backgroundColorHex: '#FFFFFF',
-      defaultButtonText: 'Book Now',
-      timezone: 'America/New_York',
+      defaultSlotDurationMinutes: 30,
+      minSchedulingNoticeDays: 1,
+      bookingWindowDays: 30,
+      spotsPerBooking: 1,
       updatedAt: new Date().toISOString()
     };
     
-    return new Response(JSON.stringify(defaultConfig), {
+    return new Response(JSON.stringify(defaultDefaults), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
   
-  const config = JSON.parse(configStr);
-  return new Response(JSON.stringify(config), {
+  const defaults = JSON.parse(defaultsStr);
+  return new Response(JSON.stringify(defaults), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...corsHeaders }
   });
 }
 
-async function handlePostBrandConfig(request, env, corsHeaders) {
-  const config = await request.json();
+async function handlePostDefaults(request, env, corsHeaders) {
+  const defaults = await request.json();
   
   // Validate required fields
-  const errors = validateBrandConfig(config);
+  const errors = validateCalendarDefaults(defaults);
   
   if (errors.length > 0) {
     return new Response(JSON.stringify({ 
@@ -94,40 +94,44 @@ async function handlePostBrandConfig(request, env, corsHeaders) {
   }
   
   // Add timestamp
-  config.updatedAt = new Date().toISOString();
+  defaults.updatedAt = new Date().toISOString();
   
   // Store in KV
-  const kvKey = `location:${config.locationId}:brand`;
-  await env.EASYCAL_SESSIONS.put(kvKey, JSON.stringify(config));
+  const kvKey = `location:${defaults.locationId}:defaults`;
+  await env.EASYCAL_SESSIONS.put(kvKey, JSON.stringify(defaults));
   
-  return new Response(JSON.stringify(config), {
+  return new Response(JSON.stringify(defaults), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...corsHeaders }
   });
 }
 
-function validateBrandConfig(config) {
+function validateCalendarDefaults(defaults) {
   const errors = [];
   
-  if (!config.locationId) {
+  if (!defaults.locationId) {
     errors.push('Location ID is required');
   }
   
-  if (!config.primaryColorHex || !/^#[0-9a-fA-F]{6}$/.test(config.primaryColorHex)) {
-    errors.push('Primary color must be a valid hex color (#RRGGBB)');
+  if (!defaults.defaultSlotDurationMinutes || defaults.defaultSlotDurationMinutes < 1) {
+    errors.push('Default slot duration must be a positive number');
   }
   
-  if (!config.backgroundColorHex || !/^#[0-9a-fA-F]{6}$/.test(config.backgroundColorHex)) {
-    errors.push('Background color must be a valid hex color (#RRGGBB)');
+  if (!defaults.minSchedulingNoticeDays || defaults.minSchedulingNoticeDays < 0) {
+    errors.push('Minimum scheduling notice must be 0 or greater');
   }
   
-  if (!config.defaultButtonText || config.defaultButtonText.length < 3 || config.defaultButtonText.length > 30) {
-    errors.push('Default button text must be 3-30 characters');
+  if (!defaults.bookingWindowDays || defaults.bookingWindowDays < 1) {
+    errors.push('Booking window must be at least 1 day');
   }
   
-  if (config.timezone) {
+  if (!defaults.spotsPerBooking || defaults.spotsPerBooking < 1) {
+    errors.push('Spots per booking must be at least 1');
+  }
+  
+  if (defaults.defaultTimezone) {
     try {
-      Intl.DateTimeFormat(undefined, { timeZone: config.timezone });
+      Intl.DateTimeFormat(undefined, { timeZone: defaults.defaultTimezone });
     } catch {
       errors.push('Invalid timezone format');
     }

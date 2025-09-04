@@ -6,46 +6,11 @@ import { Save, Settings as SettingsIcon, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/TopBar';
 import { BrandConfigComponent } from '@/components/BrandConfig';
-
-interface DefaultSettings {
-  availabilityTimezone: string;
-  slotDurationMinutes: number;
-  minNoticeDays: number;
-  bookingWindowDays: number;
-  spotsPerBooking: number;
-  isActive: boolean;
-}
-
-const defaultSettings: DefaultSettings = {
-  availabilityTimezone: 'America/New_York',
-  slotDurationMinutes: 30,
-  minNoticeDays: 1,
-  bookingWindowDays: 30,
-  spotsPerBooking: 1,
-  isActive: true,
-};
+import { CalendarDefaultsComponent } from '@/components/CalendarDefaults';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState<DefaultSettings>(defaultSettings);
-  const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'brand' | 'defaults'>('brand');
-
-  const handleSaveSettings = async () => {
-    setIsSaving(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Settings saved:', settings);
-      alert('Settings saved successfully!');
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      alert('Failed to save settings. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const tabs = [
     { id: 'brand', label: 'Brand Config', icon: Palette },
@@ -107,106 +72,11 @@ export default function SettingsPage() {
 
           {/* Defaults Tab */}
           {activeTab === 'defaults' && (
-            <div>
-              <h2 className="text-lg font-semibold text-brand-navy mb-4">Default Calendar Settings</h2>
-              <p className="text-muted-foreground mb-6">
-                Set default values for new calendars. These can be overridden in individual CSV rows.
-              </p>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Default Timezone
-                  </label>
-                  <select
-                    value={settings.availabilityTimezone}
-                    onChange={(e) => setSettings(prev => ({ ...prev, availabilityTimezone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
-                  >
-                    <option value="America/New_York">Eastern Time</option>
-                    <option value="America/Chicago">Central Time</option>
-                    <option value="America/Denver">Mountain Time</option>
-                    <option value="America/Los_Angeles">Pacific Time</option>
-                    <option value="America/Phoenix">Arizona Time</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Default Slot Duration (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="480"
-                    step="5"
-                    value={settings.slotDurationMinutes}
-                    onChange={(e) => setSettings(prev => ({ ...prev, slotDurationMinutes: parseInt(e.target.value) || 30 }))}
-                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
-                    placeholder="30"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Common values: 15, 30, 45, 60 minutes</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Minimum Notice (days)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="30"
-                    value={settings.minNoticeDays}
-                    onChange={(e) => setSettings(prev => ({ 
-                      ...prev, 
-                      minNoticeDays: parseInt(e.target.value) || 1 
-                    }))}
-                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
-                    placeholder="1"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">How many days in advance customers must book</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Booking Window (days)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={settings.bookingWindowDays}
-                    onChange={(e) => setSettings(prev => ({ ...prev, bookingWindowDays: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Spots per Booking
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={settings.spotsPerBooking}
-                    onChange={(e) => setSettings(prev => ({ ...prev, spotsPerBooking: parseInt(e.target.value) || 1 }))}
-                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
-                    placeholder="1"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">How many spots are available per time slot</p>
-                </div>
-              </div>
-            </div>
+            <CalendarDefaultsComponent 
+              locationId="loc1" // TODO: Get from actual GHL context
+              onSave={(defaults) => console.log('Defaults saved:', defaults)}
+            />
           )}
-
-
-          <div className="flex justify-end mt-6">
-            <Button onClick={handleSaveSettings} isLoading={isSaving}>
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
-            </Button>
-          </div>
         </div>
         </div>
       </div>

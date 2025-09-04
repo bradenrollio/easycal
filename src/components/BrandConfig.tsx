@@ -5,6 +5,7 @@ import { Save, Palette, Type, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandConfig } from '@/types/brand';
 import { validateColor, validateButtonText, validateTimezone } from '@/lib/validators';
+import { getCommonTimezones } from '@/lib/helpers';
 
 interface BrandConfigProps {
   locationId: string;
@@ -17,7 +18,7 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
     primaryColorHex: '#FFC300',
     backgroundColorHex: '#FFFFFF',
     defaultButtonText: 'Book Now',
-    timezone: 'America/New_York'
+    defaultTimezone: 'America/New_York'
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,8 +60,8 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
       newErrors.defaultButtonText = 'Must be 3-30 characters';
     }
 
-    if (config.timezone && !validateTimezone(config.timezone)) {
-      newErrors.timezone = 'Invalid timezone format';
+    if (config.defaultTimezone && !validateTimezone(config.defaultTimezone)) {
+      newErrors.defaultTimezone = 'Invalid timezone format';
     }
 
     setErrors(newErrors);
@@ -243,25 +244,19 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
           <div className="relative">
             <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <select
-              value={config.timezone}
-              onChange={(e) => handleInputChange('timezone', e.target.value)}
+              value={config.defaultTimezone}
+              onChange={(e) => handleInputChange('defaultTimezone', e.target.value)}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
             >
-              <option value="America/New_York">Eastern Time</option>
-              <option value="America/Chicago">Central Time</option>
-              <option value="America/Denver">Mountain Time</option>
-              <option value="America/Los_Angeles">Pacific Time</option>
-              <option value="America/Phoenix">Arizona Time</option>
-              <option value="Europe/London">London Time</option>
-              <option value="Europe/Paris">Paris Time</option>
-              <option value="Asia/Tokyo">Tokyo Time</option>
-              <option value="Australia/Sydney">Sydney Time</option>
+              {getCommonTimezones().map(tz => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
             </select>
           </div>
-          {errors.timezone && (
+          {errors.defaultTimezone && (
             <p className="text-sm text-red-600 mt-1 flex items-center">
               <AlertCircle className="w-4 h-4 mr-1" />
-              {errors.timezone}
+              {errors.defaultTimezone}
             </p>
           )}
         </div>

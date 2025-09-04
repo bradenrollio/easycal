@@ -152,8 +152,15 @@ export function validateCSVRow(
     });
   }
   
-  // Validate schedule blocks or day/time
-  if (row.schedule_blocks) {
+  // Validate schedule blocks (now required)
+  if (!row.schedule_blocks?.trim()) {
+    errors.push({
+      row: rowIndex,
+      field: 'schedule_blocks',
+      message: 'Schedule blocks are required. Use format: "Mon 09:00-10:00; Wed 14:30-15:30"',
+      severity: 'error'
+    });
+  } else {
     const blocks = parseScheduleBlocks(row.schedule_blocks);
     if (blocks.length === 0) {
       errors.push({
@@ -163,34 +170,18 @@ export function validateCSVRow(
         severity: 'error'
       });
     }
-  } else {
-    if (!row.day_of_week?.trim()) {
-      errors.push({
-        row: rowIndex,
-        field: 'day_of_week',
-        message: 'Day of week is required when schedule_blocks not provided',
-        severity: 'error'
-      });
-    }
-    
-    if (!row.time_of_week?.trim() || !isValidTime(row.time_of_week)) {
-      errors.push({
-        row: rowIndex,
-        field: 'time_of_week',
-        message: 'Valid time of week is required (HH:MM format)',
-        severity: 'error'
-      });
-    }
   }
   
   // Validate numeric fields
-  const slotInterval = parseInt(row.slot_interval);
-  const classDuration = parseInt(row.class_duration);
+  const slotInterval = parseInt(row.slot_interval_minutes);
+  const classDuration = parseInt(row.class_duration_minutes);
+  const minNotice = parseInt(row.min_scheduling_notice_days);
+  const maxBookings = parseInt(row.max_bookings_per_day);
   
   if (isNaN(slotInterval) || slotInterval <= 0) {
     errors.push({
       row: rowIndex,
-      field: 'slot_interval',
+      field: 'slot_interval_minutes',
       message: 'Slot interval must be a positive number',
       severity: 'error'
     });
@@ -199,8 +190,26 @@ export function validateCSVRow(
   if (isNaN(classDuration) || classDuration <= 0) {
     errors.push({
       row: rowIndex,
-      field: 'class_duration',
+      field: 'class_duration_minutes',
       message: 'Class duration must be a positive number',
+      severity: 'error'
+    });
+  }
+  
+  if (isNaN(minNotice) || minNotice < 0) {
+    errors.push({
+      row: rowIndex,
+      field: 'min_scheduling_notice_days',
+      message: 'Minimum scheduling notice must be 0 or greater',
+      severity: 'error'
+    });
+  }
+  
+  if (isNaN(maxBookings) || maxBookings <= 0) {
+    errors.push({
+      row: rowIndex,
+      field: 'max_bookings_per_day',
+      message: 'Max bookings per day must be a positive number',
       severity: 'error'
     });
   }
@@ -209,7 +218,7 @@ export function validateCSVRow(
   if (!isNaN(slotInterval) && !isNaN(classDuration) && classDuration % slotInterval !== 0) {
     errors.push({
       row: rowIndex,
-      field: 'class_duration',
+      field: 'class_duration_minutes',
       message: `Class duration (${classDuration}) should be divisible by slot interval (${slotInterval})`,
       severity: 'warning'
     });

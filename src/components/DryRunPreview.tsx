@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, AlertTriangle, XCircle, Palette, Calendar, Clock, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CSVCalendarRow, BrandConfig, ValidationError, CalendarPayload } from '@/types/brand';
+import { CSVCalendarRow, BrandConfig, CalendarDefaults, ValidationError, CalendarPayload } from '@/types/brand';
 import { validateCSVRow } from '@/lib/validators';
 import { buildCalendarPayload, applyBranding } from '@/lib/branding';
 
 interface DryRunPreviewProps {
   csvRows: CSVCalendarRow[];
   brandConfig: BrandConfig;
+  defaults: CalendarDefaults;
   onProceed: () => void;
   onBack: () => void;
 }
@@ -24,16 +25,17 @@ interface PreviewRow {
     primaryColor: string;
     backgroundColor: string;
     buttonText: string;
+    timezone: string;
   };
 }
 
-export function DryRunPreview({ csvRows, brandConfig, onProceed, onBack }: DryRunPreviewProps) {
+export function DryRunPreview({ csvRows, brandConfig, defaults, onProceed, onBack }: DryRunPreviewProps) {
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([]);
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
     processRows();
-  }, [csvRows, brandConfig]);
+  }, [csvRows, brandConfig, defaults]);
 
   const processRows = async () => {
     setIsProcessing(true);
@@ -46,10 +48,10 @@ export function DryRunPreview({ csvRows, brandConfig, onProceed, onBack }: DryRu
       const errors = validationErrors.filter(e => e.severity === 'error');
       const warnings = validationErrors.filter(e => e.severity === 'warning');
       
-      const branding = applyBranding(row, brandConfig);
+      const branding = applyBranding(row, brandConfig, defaults);
       
       try {
-        const payload = buildCalendarPayload(row, brandConfig);
+        const payload = buildCalendarPayload(row, brandConfig, defaults);
         
         processed.push({
           index: i,
@@ -190,27 +192,19 @@ export function DryRunPreview({ csvRows, brandConfig, onProceed, onBack }: DryRu
                   {/* Schedule */}
                   <td className="px-4 py-3">
                     <div className="text-sm">
-                      {previewRow.row.schedule_blocks ? (
-                        <div>
-                          <div className="font-medium">Multi-block</div>
-                          <div className="text-xs text-gray-500">{previewRow.row.schedule_blocks}</div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="font-medium">{previewRow.row.day_of_week}</div>
-                          <div className="text-xs text-gray-500">{previewRow.row.time_of_week}</div>
-                        </div>
-                      )}
+                      <div className="font-medium">Schedule Blocks</div>
+                      <div className="text-xs text-gray-500">{previewRow.row.schedule_blocks}</div>
                     </div>
                   </td>
 
                   {/* Settings */}
                   <td className="px-4 py-3">
                     <div className="text-xs space-y-1">
-                      <div>Duration: {previewRow.row.class_duration}min</div>
-                      <div>Interval: {previewRow.row.slot_interval}min</div>
-                      <div>Notice: {previewRow.row.min_scheduling_notice}d</div>
+                      <div>Duration: {previewRow.row.class_duration_minutes}min</div>
+                      <div>Interval: {previewRow.row.slot_interval_minutes}min</div>
+                      <div>Notice: {previewRow.row.min_scheduling_notice_days}d</div>
                       <div>Max/day: {previewRow.row.max_bookings_per_day}</div>
+                      <div>Timezone: {previewRow.branding.timezone}</div>
                     </div>
                   </td>
 

@@ -1,34 +1,41 @@
 export interface BrandConfig {
   locationId: string;
-  primaryColorHex: string;      // e.g. "#FFC300"
-  backgroundColorHex: string;   // e.g. "#FFFFFF"
-  defaultButtonText: string;    // e.g. "Book Trial"
-  timezone?: string;            // IANA, fallback "America/New_York"
-  coverImageUrl?: string;       // calendar cover image for Group View
-  updatedAt: string;            // ISO
+  primaryColorHex: string;        // e.g. "#FFC300"
+  backgroundColorHex: string;     // e.g. "#FFFFFF"
+  defaultButtonText: string;      // e.g. "Book Now"
+  defaultTimezone?: string;       // IANA; optional—if not set, use location timezone
+  coverImageUrl?: string;         // optional (for Group view / your UI), not used by GHL API
+  updatedAt: string;              // ISO
+}
+
+export interface CalendarDefaults {
+  locationId: string;
+  defaultSlotDurationMinutes: number; // e.g. 30
+  minSchedulingNoticeDays: number;    // e.g. 1
+  bookingWindowDays: number;          // e.g. 30 (if your flow uses it)
+  spotsPerBooking: number;            // e.g. 1 (maps to max bookings per slot if needed)
+  defaultTimezone?: string;           // optional; same precedence as in BrandConfig
+  updatedAt: string;                  // ISO
 }
 
 export interface CSVCalendarRow {
   // Required fields
   calendar_type: string;
   calendar_name: string;
-  day_of_week: string;
-  time_of_week: string;
-  slot_interval: string;
-  class_duration: string;
-  min_scheduling_notice: string;
+  slot_interval_minutes: string;
+  class_duration_minutes: string;
+  min_scheduling_notice_days: string;
   max_bookings_per_day: string;
+  schedule_blocks: string;
   
   // Optional fields
-  class_description?: string;
   calendar_group?: string;
+  class_description?: string;
   custom_url?: string;
   button_text?: string;
   primary_color_hex?: string;
   background_color_hex?: string;
-  timezone?: string;
   calendar_purpose?: 'trial' | 'makeup' | 'regular';
-  schedule_blocks?: string;
 }
 
 export interface CalendarPayload {

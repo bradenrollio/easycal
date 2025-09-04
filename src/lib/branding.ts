@@ -1,32 +1,20 @@
-import { BrandConfig, CSVCalendarRow, CalendarPayload, ScheduleBlock } from '@/types/brand';
-import { parseScheduleBlocks, slugify } from './validators';
+import { BrandConfig, CSVCalendarRow, CalendarPayload, ScheduleBlock, CalendarDefaults } from '@/types/brand';
+import { parseScheduleBlocks, slugify, applyBranding as applyBrandingHelper } from './helpers';
 
 // Apply branding rules with precedence
 export function applyBranding(
   row: CSVCalendarRow, 
-  brandConfig: BrandConfig
-): { primaryColor: string; backgroundColor: string; buttonText: string } {
-  // Primary color: row override > brand config
-  const primaryColor = row.primary_color_hex || brandConfig.primaryColorHex;
-  
-  // Background color: row override > brand config
-  const backgroundColor = row.background_color_hex || brandConfig.backgroundColorHex;
-  
-  // Button text: row override > purpose-specific > brand default
-  let buttonText = row.button_text;
-  
-  if (!buttonText) {
-    if (row.calendar_purpose === 'makeup') {
-      buttonText = 'Schedule Make-Up';
-    } else {
-      buttonText = brandConfig.defaultButtonText;
-    }
-  }
+  brandConfig: BrandConfig,
+  defaults?: CalendarDefaults,
+  locationTz?: string
+): { primaryColor: string; backgroundColor: string; buttonText: string; timezone: string } {
+  const result = applyBrandingHelper(row, brandConfig, defaults, locationTz);
   
   return {
-    primaryColor,
-    backgroundColor,
-    buttonText
+    primaryColor: result.primary,
+    backgroundColor: result.background,
+    buttonText: result.button,
+    timezone: result.timezone
   };
 }
 
@@ -34,56 +22,40 @@ export function applyBranding(
 export function buildCalendarPayload(
   row: CSVCalendarRow,
   brandConfig: BrandConfig,
+  defaults?: CalendarDefaults,
+  locationTz?: string,
   groupId?: string
 ): CalendarPayload {
-  const branding = applyBranding(row, brandConfig);
+  const branding = applyBranding(row, brandConfig, defaults, locationTz);
   
   // Generate slug
   const slug = row.custom_url || slugify(row.calendar_name);
   
-  // Parse availability
-  let availability: CalendarPayload['availability'];
-  
-  if (row.schedule_blocks) {
-    // Use schedule blocks if provided
-    const blocks = parseScheduleBlocks(row.schedule_blocks);
-    availability = {
-      weekly: blocks.map(block => ({
-        day: block.day.substring(0, 3), // GHL expects 3-letter day codes
-        start: block.start,
-        end: block.end
-      })),
-      slotInterval: parseInt(row.slot_interval)
-    };
-  } else {
-    // Fallback to single day/time
-    const timeRange = row.time_of_week.split('-');
-    const start = timeRange[0];
-    const end = timeRange[1] || addMinutesToTime(start, parseInt(row.class_duration));
-    
-    availability = {
-      weekly: [{
-        day: row.day_of_week.substring(0, 3),
-        start,
-        end
-      }],
-      slotInterval: parseInt(row.slot_interval)
-    };
-  }
-  
-  // Determine timezone
-  const timezone = row.timezone || brandConfig.timezone || 'America/New_York';
+  // Parse availability from schedule blocks
+  const blocks = parseScheduleBlocks(row.schedule_blocks);
+  const availability: CalendarPayload['availability'] = {
+    weekly: blocks.map(block => ({
+      day: block.day, // Keep full day format
+      start: block.start,
+      end: block.end
+    })),
+    slotInterval: parseInt(row.slot_interval_minutes) || defaults?.defaultSlotDurationMinutes || 30
+  };
   
   return {
     locationId: brandConfig.locationId,
     name: row.calendar_name,
     description: row.class_description,
     widgetType: 'default',
-    customizations: branding,
-    duration: parseInt(row.class_duration),
-    timeZone: timezone,
+    customizations: {
+      primaryColor: branding.primaryColor,
+      backgroundColor: branding.backgroundColor,
+      buttonText: branding.buttonText
+    },
+    duration: parseInt(row.class_duration_minutes),
+    timeZone: branding.timezone,
     availability,
-    minSchedulingNotice: parseInt(row.min_scheduling_notice),
+    minSchedulingNotice: parseInt(row.min_scheduling_notice_days) || defaults?.minSchedulingNoticeDays || 1,
     maxBookingsPerDay: parseInt(row.max_bookings_per_day),
     groupId,
     slug
