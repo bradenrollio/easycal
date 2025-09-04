@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Save, Settings as SettingsIcon, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/TopBar';
 import { BrandConfigComponent } from '@/components/BrandConfig';
 import { CalendarDefaultsComponent } from '@/components/CalendarDefaults';
 
-export default function SettingsPage() {
+function SettingsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'brand' | 'defaults'>('brand');
+
+  // Get location ID from URL params
+  const locationId = searchParams.get('locationId') || 'temp_location';
 
   const tabs = [
     { id: 'brand', label: 'Brand Config', icon: Palette },
@@ -64,7 +68,7 @@ export default function SettingsPage() {
                 Configure default colors and button text that will be applied to all calendars. Individual CSV rows can override these settings.
               </p>
               <BrandConfigComponent 
-                locationId="loc1" // TODO: Get from actual GHL context
+                locationId={locationId}
                 onSave={(config) => console.log('Brand config saved:', config)}
               />
             </div>
@@ -73,7 +77,7 @@ export default function SettingsPage() {
           {/* Defaults Tab */}
           {activeTab === 'defaults' && (
             <CalendarDefaultsComponent 
-              locationId="loc1" // TODO: Get from actual GHL context
+              locationId={locationId}
               onSave={(defaults) => console.log('Defaults saved:', defaults)}
             />
           )}
@@ -81,5 +85,15 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow"></div>
+    </div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }

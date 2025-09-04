@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Papa from 'papaparse';
 import { Button } from '@/components/ui/button';
 import { UploadDropzone } from '@/components/UploadDropzone';
@@ -22,8 +22,9 @@ interface CSVColumn {
 
 type ImportStep = 'upload' | 'map' | 'preview' | 'processing';
 
-export default function ImportPage() {
+function ImportContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [csvColumns, setCsvColumns] = useState<CSVColumn[]>([]);
@@ -32,15 +33,20 @@ export default function ImportPage() {
   const [brandConfig, setBrandConfig] = useState(null);
   const [defaults, setDefaults] = useState(null);
 
+  // Get location ID from URL params
+  const locationId = searchParams.get('locationId') || 'temp_location';
+
   // Load brand config and defaults on mount
   useEffect(() => {
-    loadBrandConfig();
-    loadDefaults();
-  }, []);
+    if (locationId) {
+      loadBrandConfig();
+      loadDefaults();
+    }
+  }, [locationId]);
 
   const loadBrandConfig = async () => {
     try {
-      const response = await fetch('/api/brand-config?locationId=loc1'); // TODO: Get from context
+      const response = await fetch(`/api/brand-config?locationId=${locationId}`);
       if (response.ok) {
         const config = await response.json();
         setBrandConfig(config);
@@ -52,7 +58,7 @@ export default function ImportPage() {
 
   const loadDefaults = async () => {
     try {
-      const response = await fetch('/api/settings/defaults?locationId=loc1'); // TODO: Get from context
+      const response = await fetch(`/api/settings/defaults?locationId=${locationId}`);
       if (response.ok) {
         const defaultsData = await response.json();
         setDefaults(defaultsData);
@@ -115,21 +121,57 @@ export default function ImportPage() {
     setCurrentStep('processing');
 
     try {
-      // In a real app, this would send the data to your API
-      console.log('Starting import with:', {
-        csvData: csvData.length,
-        mappings: fieldMappings,
+      // Convert CSV data to calendar rows format
+      const calendarRows = csvData.map(row => {
+        const mappedRow: any = {};
+        Object.entries(fieldMappings).forEach(([field, columnIndex]) => {
+          if (columnIndex !== null) {
+            const columnName = csvColumns[columnIndex]?.name;
+            if (columnName) {
+              mappedRow[field] = row[columnName] || '';
+            }
+          }
+        });
+        return mappedRow;
       });
 
-      // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('Starting import with:', {
+        locationId: locationId,
+        csvRows: calendarRows.length,
+        brandConfig: brandConfig,
+        defaults: defaults
+      });
 
-      // Show success message
-      alert('Import completed successfully!');
+      // Call the import API
+      const response = await fetch('/api/import-calendars', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          locationId: locationId,
+          csvRows: calendarRows,
+          brandConfig: brandConfig,
+          defaults: defaults
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Import completed:', result);
+        
+        alert(`Import completed! ${result.summary.successful} calendars created/updated, ${result.summary.failed} failed.`);
+        
+        // Redirect to calendars page to see results
+        router.push(`/calendars?locationId=${locationId}`);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Import failed');
+      }
 
     } catch (error) {
       console.error('Import failed:', error);
-      alert('Import failed. Please try again.');
+      alert(`Import failed: ${error.message}`);
       setCurrentStep('preview');
     } finally {
       setIsLoading(false);
@@ -138,7 +180,7 @@ export default function ImportPage() {
 
   const canProceedToReview = () => {
     // Check if all required fields are mapped
-    const requiredFields = ['calendar_name', 'availability_timezone', 'slot_duration_minutes', 'min_notice_minutes', 'booking_window_days', 'is_active'];
+    const requiredFields = ['calendar_type', 'calendar_name', 'slot_interval_minutes', 'class_duration_minutes', 'min_scheduling_notice_days', 'max_bookings_per_day', 'schedule_blocks'];
     return requiredFields.every(field => fieldMappings[field] !== null);
   };
 
@@ -419,5 +461,15 @@ export default function ImportPage() {
         {currentStep === 'processing' && renderProcessingStep()}
       </div>
     </div>
+  );
+}
+
+export default function ImportPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow"></div>
+    </div>}>
+      <ImportContent />
+    </Suspense>
   );
 }

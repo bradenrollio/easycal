@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Trash2, MoreHorizontal, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/TopBar';
@@ -15,59 +15,44 @@ interface Calendar {
   createdAt: string;
 }
 
-// Mock data for demonstration
-const mockCalendars: Calendar[] = [
-  {
-    id: 'cal_1',
-    name: 'General Consultations',
-    slug: 'general-consultations',
-    groupId: 'group_1',
-    isActive: true,
-    createdAt: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: 'cal_2',
-    name: 'Emergency Appointments',
-    slug: 'emergency-appointments',
-    groupId: 'group_1',
-    isActive: true,
-    createdAt: '2024-01-14T14:30:00Z',
-  },
-  {
-    id: 'cal_3',
-    name: 'Follow-up Visits',
-    slug: 'follow-up-visits',
-    groupId: 'group_2',
-    isActive: false,
-    createdAt: '2024-01-13T09:15:00Z',
-  },
-];
-
-export default function CalendarsPage() {
+function CalendarsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
 
+  // Get location ID from URL params or use a default
+  const locationId = searchParams.get('locationId') || 'temp_location';
+
   // Load calendars on mount
   useEffect(() => {
-    loadCalendars();
-  }, []);
+    if (locationId) {
+      loadCalendars();
+    }
+  }, [locationId]);
 
   const loadCalendars = async () => {
     try {
       setIsLoading(true);
-      // TODO: Get actual locationId and accessToken from context
-      const response = await fetch('/api/calendars?locationId=loc1&accessToken=mock_token');
+      console.log('Loading calendars for location:', locationId);
+      
+      const response = await fetch(`/api/calendars?locationId=${locationId}`);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Calendars loaded:', data);
         setCalendars(data.calendars || []);
+      } else {
+        console.error('Failed to load calendars:', response.status, await response.text());
+        // Fallback to empty array for now
+        setCalendars([]);
       }
     } catch (error) {
       console.error('Error loading calendars:', error);
+      setCalendars([]);
     } finally {
       setIsLoading(false);
     }
@@ -115,8 +100,7 @@ export default function CalendarsPage() {
         },
         body: JSON.stringify({
           calendarIds,
-          locationId: 'loc1', // TODO: Get from context
-          accessToken: 'mock_token' // TODO: Get from context
+          locationId: locationId
         }),
       });
 
@@ -311,5 +295,15 @@ export default function CalendarsPage() {
       )}
       </div>
     </div>
+  );
+}
+
+export default function CalendarsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow"></div>
+    </div>}>
+      <CalendarsContent />
+    </Suspense>
   );
 }

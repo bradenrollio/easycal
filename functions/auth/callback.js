@@ -196,11 +196,18 @@ async function completeInstallation(tokenData, env) {
     console.log('Token scopes:', scopes);
     console.log('Token data keys:', Object.keys(tokenData));
     
-    // Create a temporary location ID from the token or use a generic one
-    // In GHL marketplace apps, the location context is usually provided when the app is accessed
-    const locationId = tokenData.locationId || tokenData.location_id || `temp_${Date.now()}`;
-    const locationName = tokenData.companyName || tokenData.name || 'New Installation';
+    // For GHL marketplace apps, the location_id should be in the token response
+    // Let's check all possible fields where it might be
+    const locationId = tokenData.location_id || tokenData.locationId || tokenData.companyId || `temp_${Date.now()}`;
+    const locationName = tokenData.name || tokenData.companyName || tokenData.businessName || 'New Installation';
     const isAgencyInstall = scopes.includes('oauth.readonly') && scopes.includes('oauth.write');
+    
+    console.log('Extracted location info:', {
+      locationId,
+      locationName,
+      isAgencyInstall,
+      tokenDataKeys: Object.keys(tokenData)
+    });
 
     // Create tenant record
     const tenantId = generateId();
