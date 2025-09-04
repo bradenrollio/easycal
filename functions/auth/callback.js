@@ -187,28 +187,35 @@ async function exchangeCodeForTokens(code, env) {
 // Complete the installation by storing tokens and creating records
 async function completeInstallation(tokenData, env) {
   try {
-    // Get user info to determine installation context
-    const userInfoResponse = await fetch('https://services.leadconnectorhq.com/oauth/userInfo', {
+    // Get locations to determine installation context
+    const locationsResponse = await fetch('https://services.leadconnectorhq.com/locations/', {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`,
         'Version': '2021-07-28'
       }
     });
 
-    if (!userInfoResponse.ok) {
-      const errorText = await userInfoResponse.text();
-      console.error('User info API error:', userInfoResponse.status, errorText);
-      throw new Error(`Failed to get user info: ${userInfoResponse.status} - ${errorText}`);
+    if (!locationsResponse.ok) {
+      const errorText = await locationsResponse.text();
+      console.error('Locations API error:', locationsResponse.status, errorText);
+      throw new Error(`Failed to get locations: ${locationsResponse.status} - ${errorText}`);
     }
 
-    const userInfo = await userInfoResponse.json();
-    console.log('User info received:', JSON.stringify(userInfo, null, 2));
+    const locationsData = await locationsResponse.json();
+    console.log('Locations data received:', JSON.stringify(locationsData, null, 2));
 
-    // Determine if this is agency or location install
-    // The userInfo structure may vary, so let's be more flexible
-    const isAgencyInstall = userInfo.type === 'Agency' || userInfo.role === 'agency';
-    const locationId = userInfo.locationId || userInfo.companyId || userInfo.id;
-    const locationName = userInfo.name || userInfo.companyName || userInfo.businessName || 'Unknown Location';
+    // For now, use the first location (single location install) or handle multiple locations
+    const locations = locationsData.locations || [];
+    if (locations.length === 0) {
+      throw new Error('No locations found for this installation');
+    }
+
+    // Use the first location for single location installs
+    // For agency installs, we might need different logic
+    const location = locations[0];
+    const isAgencyInstall = locations.length > 1;
+    const locationId = location.id;
+    const locationName = location.name || location.businessName || 'Unknown Location';
 
     // Create tenant record
     const tenantId = generateId();
@@ -216,7 +223,7 @@ async function completeInstallation(tokenData, env) {
       id: tenantId,
       name: locationName,
       installContext: isAgencyInstall ? 'agency' : 'location',
-      agencyId: isAgencyInstall ? userInfo.companyId : null,
+      agencyId: isAgencyInstall ? location.companyId : null,
       createdAt: Math.floor(Date.now() / 1000)
     };
 
@@ -237,7 +244,7 @@ async function completeInstallation(tokenData, env) {
       id: locationId,
       tenantId: tenantId,
       name: locationName,
-      timeZone: userInfo.timezone || 'America/New_York',
+      timeZone: location.timezone || 'America/New_York',
       isEnabled: true
     };
 
