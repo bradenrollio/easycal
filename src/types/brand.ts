@@ -4,7 +4,7 @@ export interface BrandConfig {
   backgroundColorHex: string;   // e.g. "#FFFFFF"
   defaultButtonText: string;    // e.g. "Book Trial"
   timezone?: string;            // IANA, fallback "America/New_York"
-  logoUrl?: string;             // stored for landing pages; not used by GHL calendar API
+  coverImageUrl?: string;       // calendar cover image for Group View
   updatedAt: string;            // ISO
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Settings as SettingsIcon, Shield, Palette } from 'lucide-react';
+import { Save, Settings as SettingsIcon, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/TopBar';
 import { BrandConfigComponent } from '@/components/BrandConfig';
@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [settings, setSettings] = useState<DefaultSettings>(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'brand' | 'defaults' | 'security'>('brand');
+  const [activeTab, setActiveTab] = useState<'brand' | 'defaults'>('brand');
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
@@ -48,7 +48,6 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'brand', label: 'Brand Config', icon: Palette },
     { id: 'defaults', label: 'Defaults', icon: SettingsIcon },
-    { id: 'security', label: 'Security', icon: Shield },
   ];
 
   return (
@@ -63,7 +62,7 @@ export default function SettingsPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-brand-navy mb-2">Settings</h1>
           <p className="text-muted-foreground">
-            Configure brand colors, default calendar settings, and security preferences.
+            Configure brand colors and default calendar settings.
           </p>
         </div>
 
@@ -180,47 +179,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Security Tab */}
-          {activeTab === 'security' && (
-            <div>
-              <h2 className="text-lg font-semibold text-brand-navy mb-4">Security & Privacy</h2>
-              <p className="text-muted-foreground mb-6">
-                Manage security settings and data privacy options.
-              </p>
-
-              <div className="space-y-6">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <Shield className="w-5 h-5 text-green-600 mr-2" />
-                    <h3 className="font-medium text-green-800">OAuth Connection Active</h3>
-                  </div>
-                  <p className="text-sm text-green-700 mt-1">
-                    Your GoHighLevel account is securely connected with the required calendar permissions.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium text-brand-navy">Data Handling</h4>
-                  <div className="text-sm text-muted-foreground space-y-2">
-                    <p>• All data is processed securely and not stored beyond the current session</p>
-                    <p>• OAuth tokens are encrypted and stored securely</p>
-                    <p>• CSV data is processed in memory and not permanently stored</p>
-                    <p>• All calendar operations are performed directly through GoHighLevel's API</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium text-brand-navy">Permissions</h4>
-                  <div className="text-sm text-muted-foreground space-y-2">
-                    <p>• <strong>calendars.readonly</strong>: View existing calendars</p>
-                    <p>• <strong>calendars.write</strong>: Create and update calendars</p>
-                    <p>• <strong>calendars/groups.write</strong>: Create and manage calendar groups</p>
-                    <p>• <strong>calendars/events.readonly</strong>: View calendar events</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="flex justify-end mt-6">
             <Button onClick={handleSaveSettings} isLoading={isSaving}>

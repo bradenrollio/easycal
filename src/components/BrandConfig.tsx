@@ -105,6 +105,31 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
     }
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please upload a PNG, JPEG, JPG, or GIF image');
+      return;
+    }
+
+    // Validate file size (2.5MB)
+    if (file.size > 2.5 * 1024 * 1024) {
+      alert('Image must be smaller than 2.5MB');
+      return;
+    }
+
+    // Create preview URL and store file
+    const imageUrl = URL.createObjectURL(file);
+    setConfig(prev => ({ ...prev, coverImageUrl: imageUrl }));
+    
+    // TODO: In production, upload to storage and get permanent URL
+    console.log('Image selected:', file);
+  };
+
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -241,21 +266,61 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
           )}
         </div>
 
-        {/* Logo URL (optional) */}
+        {/* Calendar Cover Image Upload */}
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Logo URL (Optional)
+            Calendar Cover Image (Optional)
           </label>
+          <div 
+            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+            onClick={() => document.getElementById('cover-image-input')?.click()}
+          >
+            {config.coverImageUrl ? (
+              <div className="space-y-2">
+                <img 
+                  src={config.coverImageUrl} 
+                  alt="Calendar cover" 
+                  className="mx-auto h-32 w-32 object-cover rounded-lg border"
+                />
+                <div>
+                  <button
+                    type="button"
+                    className="text-brand-yellow hover:text-brand-yellow/80 font-medium"
+                  >
+                    Change image
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div>
+                  <button
+                    type="button"
+                    className="text-brand-yellow hover:text-brand-yellow/80 font-medium"
+                  >
+                    Click to upload
+                  </button>
+                  <span className="text-gray-500"> or drag and drop</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  PNG, JPEG, JPG or GIF (max. dimensions 180×180px | max. size 2.5mb)
+                </p>
+                <p className="text-xs text-gray-400">
+                  The uploaded image will be visible within the Group View for Neo template and won't appear on the individual calendar link
+                </p>
+              </div>
+            )}
+          </div>
           <input
-            type="url"
-            value={config.logoUrl || ''}
-            onChange={(e) => handleInputChange('logoUrl', e.target.value)}
-            placeholder="https://example.com/logo.png"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
+            id="cover-image-input"
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/gif"
+            onChange={handleImageUpload}
+            className="hidden"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Used for landing pages and email templates (not applied to GoHighLevel calendars)
-          </p>
         </div>
       </div>
 

@@ -98,7 +98,7 @@ export function DryRunPreview({ csvRows, brandConfig, onProceed, onBack }: DryRu
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-brand-navy mb-2">Import Preview</h1>
         <p className="text-muted-foreground">
-          Review your calendar data and branding before importing to GoHighLevel.
+          Review your calendar data and branding before importing.
         </p>
       </div>
 

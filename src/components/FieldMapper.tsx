@@ -28,7 +28,7 @@ const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
   {
     field: 'calendar_type',
     required: true,
-    description: 'Calendar type (Event Calendar for GoHighLevel)',
+    description: 'Calendar type (must be "Event Calendar")',
   },
   {
     field: 'calendar_name',

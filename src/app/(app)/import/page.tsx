@@ -152,7 +152,7 @@ export default function ImportPage() {
           >
             sample template
           </a>
-          {' '}with all required fields for GoHighLevel calendars.
+          {' '}with all required fields for your calendars.
         </p>
         <div className="text-xs text-muted-foreground mt-2">
           <strong>Required fields:</strong> calendar_type, calendar_name, day_of_week, time_of_week, slot_interval, class_duration, min_scheduling_notice, max_bookings_per_day<br/>
