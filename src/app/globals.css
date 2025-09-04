@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   /* Brand Colors */
@@ -15,20 +17,6 @@
   --muted-foreground: #6c757d;
   --border: #dee2e6;
   --ring: var(--brand-yellow);
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-brand-navy: var(--brand-navy);
-  --color-brand-yellow: var(--brand-yellow);
-  --color-brand-light-yellow: var(--brand-light-yellow);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-ring: var(--ring);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 body {
