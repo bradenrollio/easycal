@@ -190,21 +190,25 @@ async function completeInstallation(tokenData, env) {
     // Get user info to determine installation context
     const userInfoResponse = await fetch('https://services.leadconnectorhq.com/oauth/userInfo', {
       headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'Version': '2021-07-28'
       }
     });
 
     if (!userInfoResponse.ok) {
-      throw new Error('Failed to get user info');
+      const errorText = await userInfoResponse.text();
+      console.error('User info API error:', userInfoResponse.status, errorText);
+      throw new Error(`Failed to get user info: ${userInfoResponse.status} - ${errorText}`);
     }
 
     const userInfo = await userInfoResponse.json();
-    console.log('User info:', userInfo);
+    console.log('User info received:', JSON.stringify(userInfo, null, 2));
 
     // Determine if this is agency or location install
-    const isAgencyInstall = userInfo.type === 'Agency';
-    const locationId = isAgencyInstall ? userInfo.companyId : userInfo.locationId;
-    const locationName = userInfo.companyName || userInfo.name;
+    // The userInfo structure may vary, so let's be more flexible
+    const isAgencyInstall = userInfo.type === 'Agency' || userInfo.role === 'agency';
+    const locationId = userInfo.locationId || userInfo.companyId || userInfo.id;
+    const locationName = userInfo.name || userInfo.companyName || userInfo.businessName || 'Unknown Location';
 
     // Create tenant record
     const tenantId = generateId();
