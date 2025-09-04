@@ -73,7 +73,30 @@ export function parseGHLLocationFromURL(): string | null {
                     searchParams.get('companyId') ||
                     searchParams.get('company_id');
   
-  return locationId;
+  if (locationId) {
+    return locationId;
+  }
+
+  // Check if we're in a GHL iframe and parse location from parent URL
+  try {
+    if (window !== window.parent && window.parent.location) {
+      const parentUrl = window.parent.location.href;
+      console.log('Parent URL:', parentUrl);
+      
+      // Parse GHL URL pattern: /v2/location/LOCATION_ID/custom-page-link/PAGE_ID
+      const locationMatch = parentUrl.match(/\/v2\/location\/([^\/]+)\/custom-page-link/);
+      if (locationMatch) {
+        const ghlLocationId = locationMatch[1];
+        console.log('Extracted location ID from GHL URL pattern:', ghlLocationId);
+        return ghlLocationId;
+      }
+    }
+  } catch (error) {
+    // This will fail due to cross-origin restrictions, but worth trying
+    console.log('Cannot access parent URL due to cross-origin restrictions');
+  }
+  
+  return null;
 }
 
 // Get location ID from GHL iframe context using postMessage

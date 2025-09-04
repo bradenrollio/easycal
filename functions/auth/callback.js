@@ -205,7 +205,19 @@ async function completeInstallation(tokenData, env) {
       locationId,
       locationName,
       isAgencyInstall,
-      tokenDataKeys: Object.keys(tokenData)
+      tokenDataKeys: Object.keys(tokenData),
+      fullTokenData: tokenData
+    });
+    
+    // The location ID might be in a different field - let's check all possible fields
+    console.log('Checking all possible location ID fields:', {
+      'tokenData.location_id': tokenData.location_id,
+      'tokenData.locationId': tokenData.locationId,
+      'tokenData.companyId': tokenData.companyId,
+      'tokenData.company_id': tokenData.company_id,
+      'tokenData.sub': tokenData.sub,
+      'tokenData.aud': tokenData.aud,
+      'tokenData.scope': tokenData.scope
     });
 
     // Create tenant record

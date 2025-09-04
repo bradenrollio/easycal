@@ -44,16 +44,16 @@ function DashboardContent() {
         window.history.replaceState({}, '', `/?locationId=${detectedLocationId}`);
       } else {
         console.warn('No location ID detected, using fallback');
-        // TEMPORARY FIX: Use the location ID from GHL console logs
-        // This appears to be the actual location ID based on GHL page references
-        const fallbackLocationId = '68b9657022aaec268cea17be';
+        // TEMPORARY FIX: Use the location ID from GHL URL pattern
+        // Based on console logs showing /v2/location/HqTZdA5INm0uiGh9KvHC/
+        const fallbackLocationId = 'HqTZdA5INm0uiGh9KvHC';
         setLocationId(fallbackLocationId);
         window.history.replaceState({}, '', `/?locationId=${fallbackLocationId}`);
       }
     } catch (error) {
       console.error('Error detecting location ID:', error);
-      // TEMPORARY FIX: Use the location ID from GHL console logs
-      const fallbackLocationId = '68b9657022aaec268cea17be';
+      // TEMPORARY FIX: Use the location ID from GHL URL pattern
+      const fallbackLocationId = 'HqTZdA5INm0uiGh9KvHC';
       setLocationId(fallbackLocationId);
       window.history.replaceState({}, '', `/?locationId=${fallbackLocationId}`);
     } finally {
