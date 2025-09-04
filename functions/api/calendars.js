@@ -144,8 +144,14 @@ async function decryptToken(encryptedToken, encryptionKey) {
 async function handleListCalendars(accessToken, locationId, corsHeaders) {
   try {
     console.log('Making GHL API call to list calendars for location:', locationId);
+    console.log('Using access token (first 10 chars):', accessToken.substring(0, 10));
     
-    const response = await fetch(`https://services.leadconnectorhq.com/calendars?locationId=${locationId}`, {
+    // Use the correct GHL API endpoint format from documentation
+    const endpoint = `https://services.leadconnectorhq.com/calendars/?locationId=${locationId}`;
+    console.log('Using GHL API endpoint:', endpoint);
+    
+    const response = await fetch(endpoint, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Version': '2021-07-28',
@@ -154,13 +160,21 @@ async function handleListCalendars(accessToken, locationId, corsHeaders) {
     });
     
     console.log('GHL API response status:', response.status);
-    console.log('GHL API response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('GHL API error:', response.status, errorText);
+      console.error('GHL API error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: errorText
+      });
+      
       return new Response(JSON.stringify({ 
-        error: 'Failed to fetch calendars from GHL API' 
+        error: 'Failed to fetch calendars from GHL API',
+        status: response.status,
+        details: errorText,
+        endpoint: endpoint
       }), {
         status: 502,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -168,11 +182,13 @@ async function handleListCalendars(accessToken, locationId, corsHeaders) {
     }
     
     const data = await response.json();
+    console.log('GHL API success! Calendars found:', data.calendars?.length || 0);
     
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
+    
   } catch (error) {
     console.error('Error listing calendars:', error);
     return new Response(JSON.stringify({ 
