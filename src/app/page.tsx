@@ -90,7 +90,7 @@ export default function Home() {
                     Settings
                   </h3>
                   <p className="text-muted-foreground mb-4">
-                    Configure brand colors, button text, and preferences.
+                    Configure brand colors, button text, and default calendar settings.
                   </p>
                   <div className="text-sm text-blue-600 font-medium">
                     Configure →

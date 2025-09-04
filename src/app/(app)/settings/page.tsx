@@ -2,19 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, RefreshCw, MapPin, Settings as SettingsIcon, Shield, Palette } from 'lucide-react';
+import { Save, Settings as SettingsIcon, Shield, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/TopBar';
 import { BrandConfigComponent } from '@/components/BrandConfig';
-
-interface Location {
-  id: string;
-  name: string;
-  timeZone: string;
-  isEnabled: boolean;
-  hasToken: boolean;
-  lastSync?: string;
-}
 
 interface DefaultSettings {
   availabilityTimezone: string;
@@ -23,33 +14,6 @@ interface DefaultSettings {
   bookingWindowDays: number;
   isActive: boolean;
 }
-
-// Mock data
-const mockLocations: Location[] = [
-  {
-    id: 'loc1',
-    name: 'Primary Location',
-    timeZone: 'America/New_York',
-    isEnabled: true,
-    hasToken: true,
-    lastSync: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: 'loc2',
-    name: 'Branch Office',
-    timeZone: 'America/Los_Angeles',
-    isEnabled: true,
-    hasToken: true,
-    lastSync: '2024-01-14T14:30:00Z',
-  },
-  {
-    id: 'loc3',
-    name: 'Remote Office',
-    timeZone: 'America/Chicago',
-    isEnabled: false,
-    hasToken: false,
-  },
-];
 
 const defaultSettings: DefaultSettings = {
   availabilityTimezone: 'America/New_York',
@@ -61,28 +25,17 @@ const defaultSettings: DefaultSettings = {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [locations, setLocations] = useState<Location[]>(mockLocations);
   const [settings, setSettings] = useState<DefaultSettings>(defaultSettings);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'brand' | 'locations' | 'defaults' | 'security'>('brand');
-
-  const handleLocationToggle = (locationId: string, isEnabled: boolean) => {
-    setLocations(prev =>
-      prev.map(loc =>
-        loc.id === locationId ? { ...loc, isEnabled } : loc
-      )
-    );
-  };
+  const [activeTab, setActiveTab] = useState<'brand' | 'defaults' | 'security'>('brand');
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
-
+    
     try {
-      // In a real app, this would save to your backend
-      console.log('Saving settings:', { locations, settings });
-
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-
+      console.log('Settings saved:', settings);
       alert('Settings saved successfully!');
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -92,22 +45,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleReconnectLocation = async (locationId: string) => {
-    try {
-      // In a real app, this would trigger OAuth flow for the specific location
-      console.log('Reconnecting location:', locationId);
-
-      alert('Redirecting to authorization...');
-      // window.location.href = `/auth/install?location=${locationId}`;
-    } catch (error) {
-      console.error('Failed to reconnect location:', error);
-      alert('Failed to reconnect location. Please try again.');
-    }
-  };
-
   const tabs = [
     { id: 'brand', label: 'Brand Config', icon: Palette },
-    { id: 'locations', label: 'Locations', icon: MapPin },
     { id: 'defaults', label: 'Defaults', icon: SettingsIcon },
     { id: 'security', label: 'Security', icon: Shield },
   ];
@@ -124,12 +63,12 @@ export default function SettingsPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-brand-navy mb-2">Settings</h1>
           <p className="text-muted-foreground">
-            Manage your locations, default settings, and security preferences.
+            Configure brand colors, default calendar settings, and security preferences.
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mb-6 bg-muted p-1 rounded-lg">
+        <div className="flex space-x-1 bg-muted/30 p-1 rounded-lg mb-6">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -139,7 +78,7 @@ export default function SettingsPage() {
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-white text-brand-navy shadow-sm'
-                    : 'text-muted-foreground hover:text-brand-navy'
+                    : 'text-muted-foreground hover:text-brand-navy hover:bg-white/50'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -159,80 +98,9 @@ export default function SettingsPage() {
                 Configure default colors and button text that will be applied to all calendars. Individual CSV rows can override these settings.
               </p>
               <BrandConfigComponent 
-                locationId="loc1" // TODO: Get from actual context
+                locationId="loc1" // TODO: Get from actual GHL context
                 onSave={(config) => console.log('Brand config saved:', config)}
               />
-            </div>
-          )}
-
-          {/* Locations Tab */}
-          {activeTab === 'locations' && (
-            <div>
-              <h2 className="text-lg font-semibold text-brand-navy mb-4">Connected Locations</h2>
-              <p className="text-muted-foreground mb-6">
-                Manage which locations are enabled for calendar operations and their connection status.
-              </p>
-
-              <div className="space-y-4">
-                {locations.map((location) => (
-                  <div key={location.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-brand-yellow/10 rounded-lg flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-brand-yellow" />
-                      </div>
-
-                      <div>
-                        <h3 className="font-medium text-brand-navy">{location.name}</h3>
-                        <p className="text-sm text-muted-foreground">{location.timeZone}</p>
-                        {location.lastSync && (
-                          <p className="text-xs text-muted-foreground">
-                            Last sync: {new Date(location.lastSync).toLocaleString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-2">
-                        <span className={`inline-block w-2 h-2 rounded-full ${
-                          location.hasToken ? 'bg-green-500' : 'bg-red-500'
-                        }`} />
-                        <span className="text-sm text-muted-foreground">
-                          {location.hasToken ? 'Connected' : 'Disconnected'}
-                        </span>
-                      </div>
-
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={location.isEnabled}
-                          onChange={(e) => handleLocationToggle(location.id, e.target.checked)}
-                          className="rounded border-border text-brand-yellow focus:ring-brand-yellow"
-                        />
-                        <span className="text-sm">Enabled</span>
-                      </label>
-
-                      {!location.hasToken && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleReconnectLocation(location.id)}
-                        >
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          Reconnect
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Disabling a location will prevent calendar operations for that location.
-                  Reconnecting requires going through the OAuth flow again.
-                </p>
-              </div>
             </div>
           )}
 
@@ -241,59 +109,62 @@ export default function SettingsPage() {
             <div>
               <h2 className="text-lg font-semibold text-brand-navy mb-4">Default Calendar Settings</h2>
               <p className="text-muted-foreground mb-6">
-                Set default values for calendar properties when they're not specified in your CSV.
+                Set default values for new calendars. These can be overridden in individual CSV rows.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-brand-navy mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Default Timezone
                   </label>
                   <select
                     value={settings.availabilityTimezone}
                     onChange={(e) => setSettings(prev => ({ ...prev, availabilityTimezone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-yellow"
+                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
                   >
                     <option value="America/New_York">Eastern Time</option>
                     <option value="America/Chicago">Central Time</option>
                     <option value="America/Denver">Mountain Time</option>
                     <option value="America/Los_Angeles">Pacific Time</option>
-                    <option value="UTC">UTC</option>
+                    <option value="America/Phoenix">Arizona Time</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-brand-navy mb-2">
-                    Slot Duration (minutes)
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Default Slot Duration (minutes)
                   </label>
-                  <input
-                    type="number"
-                    min="15"
-                    max="480"
-                    step="15"
+                  <select
                     value={settings.slotDurationMinutes}
                     onChange={(e) => setSettings(prev => ({ ...prev, slotDurationMinutes: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-yellow"
-                  />
+                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
+                  >
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                  </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-brand-navy mb-2">
-                    Minimum Notice (minutes)
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Minimum Notice (days)
                   </label>
                   <input
                     type="number"
                     min="0"
-                    max="1440"
-                    step="15"
-                    value={settings.minNoticeMinutes}
-                    onChange={(e) => setSettings(prev => ({ ...prev, minNoticeMinutes: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-yellow"
+                    max="30"
+                    value={settings.minNoticeMinutes / (24 * 60)}
+                    onChange={(e) => setSettings(prev => ({ 
+                      ...prev, 
+                      minNoticeMinutes: parseInt(e.target.value) * 24 * 60 
+                    }))}
+                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-brand-navy mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Booking Window (days)
                   </label>
                   <input
@@ -302,25 +173,8 @@ export default function SettingsPage() {
                     max="365"
                     value={settings.bookingWindowDays}
                     onChange={(e) => setSettings(prev => ({ ...prev, bookingWindowDays: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-yellow"
+                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
                   />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={settings.isActive}
-                      onChange={(e) => setSettings(prev => ({ ...prev, isActive: e.target.checked }))}
-                      className="rounded border-border text-brand-yellow focus:ring-brand-yellow"
-                    />
-                    <span className="text-sm font-medium text-brand-navy">
-                      Calendars are active by default
-                    </span>
-                  </label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    New calendars will be active and available for bookings unless specified otherwise.
-                  </p>
                 </div>
               </div>
             </div>
@@ -329,56 +183,45 @@ export default function SettingsPage() {
           {/* Security Tab */}
           {activeTab === 'security' && (
             <div>
-              <h2 className="text-lg font-semibold text-brand-navy mb-4">Security Settings</h2>
+              <h2 className="text-lg font-semibold text-brand-navy mb-4">Security & Privacy</h2>
               <p className="text-muted-foreground mb-6">
-                Manage security preferences and connection settings.
+                Manage security settings and data privacy options.
               </p>
 
               <div className="space-y-6">
-                <div className="p-4 border border-border rounded-lg">
-                  <h3 className="font-medium text-brand-navy mb-2">API Tokens</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Your OAuth tokens are encrypted and stored securely. You can regenerate them if needed.
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Shield className="w-5 h-5 text-green-600 mr-2" />
+                    <h3 className="font-medium text-green-800">OAuth Connection Active</h3>
+                  </div>
+                  <p className="text-sm text-green-700 mt-1">
+                    Your GoHighLevel account is securely connected with the required calendar permissions.
                   </p>
-                  <Button variant="outline" size="sm">
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Regenerate Tokens
-                  </Button>
                 </div>
 
-                <div className="p-4 border border-border rounded-lg">
-                  <h3 className="font-medium text-brand-navy mb-2">Session Management</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Manage your current session and authentication status.
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Current session expires in 24 hours</span>
-                    <Button variant="outline" size="sm">
-                      Extend Session
-                    </Button>
+                <div className="space-y-4">
+                  <h4 className="font-medium text-brand-navy">Data Handling</h4>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>• All data is processed securely and not stored beyond the current session</p>
+                    <p>• OAuth tokens are encrypted and stored securely</p>
+                    <p>• CSV data is processed in memory and not permanently stored</p>
+                    <p>• All calendar operations are performed directly through GoHighLevel's API</p>
                   </div>
                 </div>
 
-                <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
-                  <h3 className="font-medium text-red-800 mb-2">Danger Zone</h3>
-                  <p className="text-sm text-red-600 mb-4">
-                    These actions are irreversible. Please proceed with caution.
-                  </p>
-                  <div className="flex space-x-3">
-                    <Button variant="destructive" size="sm">
-                      Disconnect All Locations
-                    </Button>
-                    <Button variant="destructive" size="sm">
-                      Reset All Settings
-                    </Button>
+                <div className="space-y-4">
+                  <h4 className="font-medium text-brand-navy">Permissions</h4>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>• <strong>calendars.readonly</strong>: View existing calendars</p>
+                    <p>• <strong>calendars.write</strong>: Create and update calendars</p>
+                    <p>• <strong>calendars/groups.write</strong>: Create and manage calendar groups</p>
+                    <p>• <strong>calendars/events.readonly</strong>: View calendar events</p>
                   </div>
                 </div>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Save Button */}
         <div className="flex justify-end mt-6">
           <Button onClick={handleSaveSettings} isLoading={isSaving}>
             <Save className="w-4 h-4 mr-2" />
