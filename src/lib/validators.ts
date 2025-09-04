@@ -40,7 +40,7 @@ export function validateBrandConfig(config: Partial<BrandConfig>): string[] {
     errors.push('Default button text must be 3-30 characters');
   }
   
-  if (config.timezone && !validateTimezone(config.timezone)) {
+  if (config.defaultTimezone && !validateTimezone(config.defaultTimezone)) {
     errors.push('Invalid timezone format');
   }
   
@@ -243,15 +243,7 @@ export function validateCSVRow(
     });
   }
   
-  // Validate timezone override
-  if (row.timezone && !validateTimezone(row.timezone)) {
-    errors.push({
-      row: rowIndex,
-      field: 'timezone',
-      message: 'Invalid timezone format',
-      severity: 'error'
-    });
-  }
+  // Note: Timezone is now handled via settings, not CSV columns
   
   // Validate button text override
   if (row.button_text && !validateButtonText(row.button_text)) {

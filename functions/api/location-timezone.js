@@ -33,14 +33,29 @@ export async function onRequest(context) {
       });
     }
     
-    // Get access token for this location
-    const token = await getLocationToken(locationId, env);
+    // First try to get timezone from our database
+    const locationResult = await env.DB.prepare(`
+      SELECT time_zone FROM locations WHERE id = ?
+    `).bind(locationId).first();
     
-    if (!token) {
+    if (locationResult) {
       return new Response(JSON.stringify({ 
-        error: 'No access token found for location' 
+        timeZone: locationResult.time_zone 
       }), {
-        status: 404,
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    
+    // If not in database, try to get from GHL API
+    const tokenData = await getLocationToken(locationId, env);
+    
+    if (!tokenData) {
+      // Return default timezone if no token available
+      return new Response(JSON.stringify({ 
+        timeZone: 'America/New_York'
+      }), {
+        status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
@@ -48,7 +63,7 @@ export async function onRequest(context) {
     // Fetch location details from GHL API
     const ghlResponse = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${tokenData.accessToken}`,
         'Version': '2021-07-28',
         'Content-Type': 'application/json'
       }
@@ -57,17 +72,27 @@ export async function onRequest(context) {
     if (!ghlResponse.ok) {
       console.error('GHL API error:', await ghlResponse.text());
       return new Response(JSON.stringify({ 
-        error: 'Failed to fetch location from GHL API' 
+        timeZone: 'America/New_York' // Fallback
       }), {
-        status: 502,
+        status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
     
     const locationData = await ghlResponse.json();
+    const timeZone = locationData.location?.timezone || 'America/New_York';
+    
+    // Update our database with the timezone
+    try {
+      await env.DB.prepare(`
+        UPDATE locations SET time_zone = ? WHERE id = ?
+      `).bind(timeZone, locationId).run();
+    } catch (error) {
+      console.warn('Failed to update location timezone in database:', error);
+    }
     
     return new Response(JSON.stringify({ 
-      timeZone: locationData.location?.timezone || 'America/New_York'
+      timeZone: timeZone
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -87,25 +112,69 @@ export async function onRequest(context) {
 
 async function getLocationToken(locationId, env) {
   try {
-    // Try to get token from KV storage first
-    const tokenKey = `token:${locationId}`;
-    const tokenStr = await env.EASYCAL_SESSIONS.get(tokenKey);
+    // Get token from database
+    const result = await env.DB.prepare(`
+      SELECT access_token, refresh_token, expires_at 
+      FROM tokens 
+      WHERE location_id = ? 
+      ORDER BY expires_at DESC 
+      LIMIT 1
+    `).bind(locationId).first();
     
-    if (tokenStr) {
-      const tokenData = JSON.parse(tokenStr);
-      
-      // Check if token is expired
-      if (new Date(tokenData.expiresAt) > new Date()) {
-        return tokenData.accessToken;
-      }
+    if (!result) {
+      return null;
     }
     
-    // TODO: Implement token refresh logic here
-    // For now, return null if no valid token found
-    return null;
+    // Check if token is expired
+    const now = Math.floor(Date.now() / 1000);
+    if (result.expires_at <= now) {
+      // TODO: Implement token refresh
+      console.warn('Token expired for location:', locationId);
+      return null;
+    }
     
+    // Decrypt token
+    const accessToken = await decryptToken(result.access_token, env.ENCRYPTION_KEY);
+    
+    return {
+      accessToken,
+      refreshToken: result.refresh_token,
+      expiresAt: result.expires_at
+    };
   } catch (error) {
     console.error('Error getting location token:', error);
     return null;
+  }
+}
+
+// Decrypt token using Web Crypto API
+async function decryptToken(encryptedToken, encryptionKey) {
+  try {
+    const [encryptedData, ivData] = encryptedToken.split(':');
+    
+    // Import the encryption key
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(encryptionKey.substring(0, 32)),
+      { name: 'AES-GCM' },
+      false,
+      ['decrypt']
+    );
+    
+    // Convert from base64
+    const encrypted = new Uint8Array(atob(encryptedData).split('').map(char => char.charCodeAt(0)));
+    const iv = new Uint8Array(atob(ivData).split('').map(char => char.charCodeAt(0)));
+    
+    // Decrypt
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      encrypted
+    );
+    
+    return new TextDecoder().decode(decrypted);
+  } catch (error) {
+    console.error('Decryption error:', error);
+    throw new Error('Failed to decrypt token');
   }
 }
