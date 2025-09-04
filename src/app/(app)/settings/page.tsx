@@ -10,7 +10,7 @@ import { BrandConfigComponent } from '@/components/BrandConfig';
 interface DefaultSettings {
   availabilityTimezone: string;
   slotDurationMinutes: number;
-  minNoticeMinutes: number;
+  minNoticeDays: number;
   bookingWindowDays: number;
   spotsPerBooking: number;
   isActive: boolean;
@@ -19,7 +19,7 @@ interface DefaultSettings {
 const defaultSettings: DefaultSettings = {
   availabilityTimezone: 'America/New_York',
   slotDurationMinutes: 30,
-  minNoticeMinutes: 60,
+  minNoticeDays: 1,
   bookingWindowDays: 30,
   spotsPerBooking: 1,
   isActive: true,
@@ -156,13 +156,15 @@ export default function SettingsPage() {
                     type="number"
                     min="0"
                     max="30"
-                    value={settings.minNoticeMinutes / (24 * 60)}
+                    value={settings.minNoticeDays}
                     onChange={(e) => setSettings(prev => ({ 
                       ...prev, 
-                      minNoticeMinutes: parseInt(e.target.value) * 24 * 60 
+                      minNoticeDays: parseInt(e.target.value) || 1 
                     }))}
                     className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
+                    placeholder="1"
                   />
+                  <p className="text-xs text-gray-500 mt-1">How many days in advance customers must book</p>
                 </div>
 
                 <div>
