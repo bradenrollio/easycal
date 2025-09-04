@@ -19,14 +19,6 @@ export const metadata: Metadata = {
   keywords: ["calendar", "management", "bulk", "scheduling", "business"],
   authors: [{ name: "EasyCal Team" }],
   viewport: "width=device-width, initial-scale=1",
-  icons: {
-    icon: [
-      { url: '/logo.png', sizes: '32x32', type: 'image/png' },
-      { url: '/logo.png', sizes: '16x16', type: 'image/png' }
-    ],
-    shortcut: '/logo.png',
-    apple: '/logo.png',
-  },
 };
 
 export default function RootLayout({
@@ -39,6 +31,10 @@ export default function RootLayout({
       <head>
         <meta name="robots" content="noindex, nofollow" />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icon-16x16.png" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/logo.png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
