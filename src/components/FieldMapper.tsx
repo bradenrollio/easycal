@@ -80,6 +80,11 @@ const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
     required: true,
     description: 'Maximum number of bookings allowed per day',
   },
+  {
+    field: 'spots_per_booking',
+    required: false,
+    description: 'Number of spots available per time slot (default: 1)',
+  },
 ];
 
 export function FieldMapper({ csvColumns, onMappingChange, initialMappings = {} }: FieldMapperProps) {

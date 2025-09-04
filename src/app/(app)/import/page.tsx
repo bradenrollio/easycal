@@ -156,7 +156,7 @@ export default function ImportPage() {
         </p>
         <div className="text-xs text-muted-foreground mt-2">
           <strong>Required fields:</strong> calendar_type, calendar_name, day_of_week, time_of_week, slot_interval, class_duration, min_scheduling_notice, max_bookings_per_day<br/>
-          <strong>Optional fields:</strong> class_description, calendar_group, custom_url
+          <strong>Optional fields:</strong> spots_per_booking, class_description, calendar_group, custom_url, button_text, primary_color_hex, background_color_hex, schedule_blocks
         </div>
       </div>
     </div>

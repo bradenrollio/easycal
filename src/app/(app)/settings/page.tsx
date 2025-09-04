@@ -12,6 +12,7 @@ interface DefaultSettings {
   slotDurationMinutes: number;
   minNoticeMinutes: number;
   bookingWindowDays: number;
+  spotsPerBooking: number;
   isActive: boolean;
 }
 
@@ -20,6 +21,7 @@ const defaultSettings: DefaultSettings = {
   slotDurationMinutes: 30,
   minNoticeMinutes: 60,
   bookingWindowDays: 30,
+  spotsPerBooking: 1,
   isActive: true,
 };
 
@@ -133,16 +135,17 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Default Slot Duration (minutes)
                   </label>
-                  <select
+                  <input
+                    type="number"
+                    min="5"
+                    max="480"
+                    step="5"
                     value={settings.slotDurationMinutes}
-                    onChange={(e) => setSettings(prev => ({ ...prev, slotDurationMinutes: parseInt(e.target.value) }))}
+                    onChange={(e) => setSettings(prev => ({ ...prev, slotDurationMinutes: parseInt(e.target.value) || 30 }))}
                     className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
-                  >
-                    <option value="15">15 minutes</option>
-                    <option value="30">30 minutes</option>
-                    <option value="45">45 minutes</option>
-                    <option value="60">60 minutes</option>
-                  </select>
+                    placeholder="30"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Common values: 15, 30, 45, 60 minutes</p>
                 </div>
 
                 <div>
@@ -174,6 +177,22 @@ export default function SettingsPage() {
                     onChange={(e) => setSettings(prev => ({ ...prev, bookingWindowDays: parseInt(e.target.value) }))}
                     className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Spots per Booking
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={settings.spotsPerBooking}
+                    onChange={(e) => setSettings(prev => ({ ...prev, spotsPerBooking: parseInt(e.target.value) || 1 }))}
+                    className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
+                    placeholder="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">How many spots are available per time slot</p>
                 </div>
               </div>
             </div>

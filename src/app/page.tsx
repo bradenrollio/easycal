@@ -13,10 +13,10 @@ export default function Home() {
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-brand-navy mb-2">
-              Move fast with bulk calendar actions
+              Easily set up and manage your class calendars
             </h2>
             <p className="text-muted-foreground">
-              Import multiple calendars from a CSV or manage existing ones in bulk.
+              Create trial and make-up class calendars in minutes. Import from a spreadsheet or update existing ones—all in one place.
             </p>
           </div>
 
@@ -37,7 +37,7 @@ export default function Home() {
                     Import Calendars
                   </h3>
                   <p className="text-muted-foreground mb-4">
-                    Upload a CSV, map fields, and create calendars in seconds.
+                    Upload a simple CSV to quickly create multiple class calendars at once.
                   </p>
                   <div className="text-sm text-brand-yellow font-medium">
                     Get started →
@@ -62,7 +62,7 @@ export default function Home() {
                     Manage Calendars
                   </h3>
                   <p className="text-muted-foreground mb-4">
-                    View, search, and bulk delete existing calendars.
+                    View, edit, or remove your existing calendars anytime.
                   </p>
                   <div className="text-sm text-red-600 font-medium">
                     Manage now →
@@ -90,7 +90,7 @@ export default function Home() {
                     Settings
                   </h3>
                   <p className="text-muted-foreground mb-4">
-                    Configure brand colors, button text, and default calendar settings.
+                    Set your studio's colors, button text, and default options so every calendar matches your brand.
                   </p>
                   <div className="text-sm text-blue-600 font-medium">
                     Configure →
@@ -104,7 +104,7 @@ export default function Home() {
           <div className="mt-12 grid gap-4 md:grid-cols-3 max-w-4xl">
             <div className="bg-white rounded-lg p-4 card-shadow border border-border">
               <div className="text-2xl font-bold text-brand-navy">0</div>
-              <div className="text-sm text-muted-foreground">Active Calendars</div>
+              <div className="text-sm text-muted-foreground">Live Calendars</div>
             </div>
             <div className="bg-white rounded-lg p-4 card-shadow border border-border">
               <div className="text-2xl font-bold text-green-600">0</div>
@@ -112,7 +112,7 @@ export default function Home() {
             </div>
             <div className="bg-white rounded-lg p-4 card-shadow border border-border">
               <div className="text-2xl font-bold text-blue-600">0</div>
-              <div className="text-sm text-muted-foreground">Pending Jobs</div>
+              <div className="text-sm text-muted-foreground">Imports in Progress</div>
             </div>
           </div>
         </div>
