@@ -20,8 +20,11 @@ export const metadata: Metadata = {
   authors: [{ name: "EasyCal Team" }],
   viewport: "width=device-width, initial-scale=1",
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
+    icon: [
+      { url: '/logo.png', sizes: '32x32', type: 'image/png' },
+      { url: '/logo.png', sizes: '16x16', type: 'image/png' }
+    ],
+    shortcut: '/logo.png',
     apple: '/logo.png',
   },
 };

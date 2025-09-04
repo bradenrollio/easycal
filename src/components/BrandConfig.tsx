@@ -343,17 +343,6 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={handleSave}
-          isLoading={isSaving}
-          disabled={Object.keys(errors).length > 0}
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Save Brand Config
-        </Button>
-      </div>
     </div>
   );
 }

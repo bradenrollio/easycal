@@ -45,11 +45,33 @@ const mockCalendars: Calendar[] = [
 
 export default function CalendarsPage() {
   const router = useRouter();
-  const [calendars, setCalendars] = useState<Calendar[]>(mockCalendars);
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+
+  // Load calendars on mount
+  useEffect(() => {
+    loadCalendars();
+  }, []);
+
+  const loadCalendars = async () => {
+    try {
+      setIsLoading(true);
+      // TODO: Get actual locationId and accessToken from context
+      const response = await fetch('/api/calendars?locationId=loc1&accessToken=mock_token');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCalendars(data.calendars || []);
+      }
+    } catch (error) {
+      console.error('Error loading calendars:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Filter calendars based on search query
   const filteredCalendars = calendars.filter(calendar =>
@@ -84,19 +106,35 @@ export default function CalendarsPage() {
     setIsLoading(true);
 
     try {
-      // In a real app, this would call your API
-      console.log('Deleting calendars:', Array.from(selectedCalendars));
+      const calendarIds = Array.from(selectedCalendars);
+      
+      const response = await fetch('/api/calendars', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          calendarIds,
+          locationId: 'loc1', // TODO: Get from context
+          accessToken: 'mock_token' // TODO: Get from context
+        }),
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Remove deleted calendars from state
-      setCalendars(prev => prev.filter(cal => !selectedCalendars.has(cal.id)));
-      setSelectedCalendars(new Set());
-
-      // Show success message (you would use a toast library)
-      alert(`Successfully deleted ${selectedCalendars.size} calendar(s)`);
-
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Remove deleted calendars from state
+        setCalendars(prev => prev.filter(cal => !result.success.includes(cal.id)));
+        setSelectedCalendars(new Set());
+        
+        alert(`Successfully deleted ${result.summary.deleted} calendars`);
+        
+        if (result.failed.length > 0) {
+          console.warn('Some deletions failed:', result.failed);
+        }
+      } else {
+        throw new Error('Delete request failed');
+      }
     } catch (error) {
       console.error('Bulk delete failed:', error);
       alert('Failed to delete calendars. Please try again.');
@@ -121,7 +159,7 @@ export default function CalendarsPage() {
         <div>
           <h1 className="text-2xl font-bold text-brand-navy">Calendars</h1>
           <p className="text-muted-foreground">
-            Manage your calendar configurations
+            View, search, and manage your class calendars
           </p>
         </div>
 
