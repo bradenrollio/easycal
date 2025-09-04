@@ -13,7 +13,7 @@ export * from './branding';
 export const APP_CONFIG = {
   NAME: 'EasyCal',
   VERSION: '1.0.0',
-  DESCRIPTION: 'Brand-Aware Bulk Calendar Manager for GoHighLevel',
+  DESCRIPTION: 'Brand-Aware Bulk Calendar Manager',
   SUPPORT_EMAIL: 'support@easycal.app',
 } as const;
 

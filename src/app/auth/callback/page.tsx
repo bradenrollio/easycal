@@ -64,7 +64,7 @@ function AuthCallbackContent() {
         {status === 'success' && (
           <>
             <h1 className="text-2xl font-bold text-green-600 mb-4">Authorization Successful!</h1>
-            <p className="text-gray-600 mb-4">You have successfully connected your GoHighLevel account.</p>
+            <p className="text-gray-600 mb-4">You have successfully connected your account.</p>
             <p className="text-sm text-gray-500">Redirecting to the main application...</p>
           </>
         )}

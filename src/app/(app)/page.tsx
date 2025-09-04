@@ -32,7 +32,7 @@ function DashboardContent() {
 
   const detectLocationId = async () => {
     try {
-      console.log('Detecting location ID using GHL context...');
+      console.log('Detecting location ID...');
       
       // Use the comprehensive location detection
       const detectedLocationId = await getLocationId();
@@ -103,7 +103,7 @@ function DashboardContent() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-yellow mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Connecting to your GHL account...</p>
+          <p className="text-muted-foreground">Connecting to your account...</p>
         </div>
       </div>
     );
@@ -116,7 +116,7 @@ function DashboardContent() {
         <div className="text-center py-12">
           <div className="text-red-600 mb-4">
             <h2 className="text-xl font-bold">No Location Found</h2>
-            <p>Unable to detect your GHL location. Please try reinstalling the app.</p>
+            <p>Unable to detect your location. Please try reinstalling the app.</p>
           </div>
           <a href="/auth/install" className="text-brand-yellow hover:underline">
             Reinstall EasyCal

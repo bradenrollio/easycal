@@ -44,7 +44,7 @@ function AuthInstallContent() {
         const authUrl = `${baseUrl}?${params.toString()}`;
         console.log('Redirecting to:', authUrl);
         
-        // Redirect to GoHighLevel OAuth
+        // Redirect to OAuth authorization
         window.location.href = authUrl;
       } catch (error) {
         console.error('OAuth error:', error);
@@ -57,8 +57,8 @@ function AuthInstallContent() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Redirecting to GoHighLevel...</h1>
-        <p className="text-gray-600">Please wait while we redirect you to authorize the application.</p>
+        <h1 className="text-2xl font-bold mb-4">Authorizing Application...</h1>
+        <p className="text-gray-600">Please wait while we set up your account access.</p>
       </div>
     </div>
   );
