@@ -222,11 +222,12 @@ export default function SettingsPage() {
             </div>
           )}
 
-        <div className="flex justify-end mt-6">
-          <Button onClick={handleSaveSettings} isLoading={isSaving}>
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
+          <div className="flex justify-end mt-6">
+            <Button onClick={handleSaveSettings} isLoading={isSaving}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </Button>
+          </div>
         </div>
         </div>
       </div>
