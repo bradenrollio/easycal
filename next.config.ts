@@ -9,12 +9,12 @@ const nextConfig: NextConfig = {
     dirs: ['src'],
   },
 
-  // Output configuration for Cloudflare Pages
-  output: 'export',
-  trailingSlash: true,
-  images: {
-    unoptimized: true,
-  },
+  // Output configuration for Cloudflare Pages (temporarily disabled for dev)
+  // output: 'export',
+  // trailingSlash: true,
+  // images: {
+  //   unoptimized: true,
+  // },
 
   // Environment variables
   env: {

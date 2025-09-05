@@ -41,6 +41,35 @@ export default function RootLayout({
               if (window.parent !== window) {
                 document.documentElement.setAttribute('data-iframe', 'true');
                 document.body?.setAttribute('data-iframe', 'true');
+                
+                // Force CSS to load in iframe
+                document.addEventListener('DOMContentLoaded', function() {
+                  // Add inline critical styles for iframe
+                  const style = document.createElement('style');
+                  style.textContent = \`
+                    body { 
+                      font-family: 'Inter', system-ui, sans-serif !important;
+                      margin: 0 !important;
+                      padding: 0 !important;
+                    }
+                    .bg-sidebar-dark { background-color: #000000 !important; }
+                    .bg-brand-yellow { background-color: #ffc300 !important; }
+                    .text-brand-navy { color: #000814 !important; }
+                    .text-white { color: #ffffff !important; }
+                    .border { border-width: 1px !important; }
+                    .rounded-lg { border-radius: 0.5rem !important; }
+                    .p-4 { padding: 1rem !important; }
+                    .p-6 { padding: 1.5rem !important; }
+                    .mb-4 { margin-bottom: 1rem !important; }
+                    .mb-6 { margin-bottom: 1.5rem !important; }
+                    .flex { display: flex !important; }
+                    .hidden { display: none !important; }
+                    .md\\:flex { display: flex !important; }
+                    .w-64 { width: 16rem !important; }
+                    .min-h-screen { min-height: 100vh !important; }
+                  \`;
+                  document.head.appendChild(style);
+                });
               }
             `,
           }}

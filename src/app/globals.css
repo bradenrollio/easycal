@@ -1,6 +1,3 @@
-/* PROBE — remove after test */
-body { background: pink !important; }
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -25,14 +22,18 @@ body {
   --ring: var(--brand-yellow);
 }
 
-/* Iframe-specific fixes */
+/* Iframe-specific fixes for GHL */
 html[data-iframe="true"],
-body[data-iframe="true"] {
+body[data-iframe="true"],
+html,
+body {
   margin: 0 !important;
   padding: 0 !important;
   width: 100% !important;
   height: 100% !important;
   overflow-x: hidden !important;
+  /* Force styles to load in iframe */
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 }
 
 @layer base {
