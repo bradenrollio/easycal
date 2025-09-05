@@ -1,17 +1,31 @@
-import { TopBar } from '@/components/TopBar';
+'use client';
+
+import React, { useState } from 'react';
+import { Sidebar } from '@/components/Sidebar';
+import { MobileNav } from '@/components/MobileNav';
 
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen bg-background">
-      <TopBar />
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-      <main className="flex-1">
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <Sidebar 
+        isCollapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden pb-16 md:pb-0">
         {children}
       </main>
+
+      {/* Mobile Navigation */}
+      <MobileNav />
     </div>
   );
 }

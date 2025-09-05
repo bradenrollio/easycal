@@ -1,0 +1,12 @@
+# .cursorrules
+- files:
+    - next.config.ts
+    - tailwind.config.js
+    - postcss.config.js
+    - tsconfig.json
+    - src/app/globals.css
+    - src/app/layout.tsx
+  rules:
+    - do_not_move: true
+    - do_not_rename: true
+    - require_explicit_approval_for_edits: true

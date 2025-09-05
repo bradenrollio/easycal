@@ -60,13 +60,32 @@ export function TopBar({ showBackButton = false, onBack, children }: TopBarProps
     const adjustHeight = (): void => {
       if (window.parent !== window) {
         // We're in an iframe - calculate and send height to parent
-        const height = document.body.scrollHeight;
+        const height = Math.max(
+          document.body.scrollHeight,
+          document.body.offsetHeight,
+          document.documentElement.clientHeight,
+          document.documentElement.scrollHeight,
+          document.documentElement.offsetHeight
+        );
+        
+        // Send multiple message formats for better compatibility
         window.parent.postMessage(
           {
             type: 'resize',
             height: height,
+            source: 'easycal-app'
           },
           '*' // AI-NOTE: In production, specify exact parent origin for security
+        );
+        
+        // Alternative format for GHL
+        window.parent.postMessage(
+          {
+            action: 'setHeight',
+            height: height,
+            app: 'easycal'
+          },
+          '*'
         );
       }
     };
@@ -90,27 +109,33 @@ export function TopBar({ showBackButton = false, onBack, children }: TopBarProps
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-white card-shadow">
-      <div className="flex h-16 items-center justify-between px-4">
-        <div className="flex items-center space-x-4">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-lg">
+      <div className="flex h-20 items-center justify-between px-6">
+        <div className="flex items-center space-x-6">
           {showBackButton && (
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 text-brand-navy hover:text-brand-yellow transition-colors"
+              className="flex items-center space-x-3 text-black hover:text-brand-yellow transition-all duration-300 bg-gray-50 hover:bg-brand-yellow/10 px-4 py-2 rounded-xl font-medium"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               <span>Back</span>
             </button>
           )}
-          <Image
-            src="/app-logo-wide.png"
-            alt="EasyCal"
-            width={120}
-            height={32}
-            className="h-8 w-auto"
-          />
+          <div className="flex items-center space-x-3">
+            <Image
+              src="/app-logo-wide.png"
+              alt="EasyCal"
+              width={140}
+              height={36}
+              className="h-9 w-auto"
+            />
+            <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
+            <span className="text-sm text-gray-500 font-medium hidden sm:inline">
+              Bulk Calendar Management
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center space-x-4">

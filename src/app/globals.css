@@ -1,16 +1,22 @@
+/* PROBE — remove after test */
+body { background: pink !important; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* Ensure CSS variables work in all contexts including iframes */
+:root,
+html,
+body {
   /* Brand Colors */
   --brand-navy: #000814;
-  --brand-yellow: #FFC300;
+  --brand-yellow: #ffc300;
   --brand-light-yellow: #FFD60A;
 
   /* Background and foreground */
   --background: #ffffff;
-  --foreground: var(--brand-navy);
+  --foreground: #000000;
 
   /* Semantic colors */
   --muted: #f8f9fa;
@@ -19,11 +25,37 @@
   --ring: var(--brand-yellow);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.5;
+/* Iframe-specific fixes */
+html[data-iframe="true"],
+body[data-iframe="true"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow-x: hidden !important;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  * {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
 }
 
 /* Custom scrollbar */
@@ -67,4 +99,88 @@ body {
 .btn-hover:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Sidebar animations */
+.sidebar-transition {
+  transition: width 0.3s ease-in-out;
+}
+
+/* Loading spinner */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}
+
+/* Smooth hover transitions */
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Glow effect */
+.glow-yellow:hover {
+  box-shadow: 0 0 20px rgba(255, 195, 0, 0.3);
+}
+
+/* Utility classes */
+@layer utilities {
+  .transition-all-200 {
+    transition: all 200ms ease-in-out;
+  }
+  
+  .focus-ring-yellow {
+    @apply focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2;
+  }
+  
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .bg-gradient-yellow {
+    background: linear-gradient(135deg, #ffc300 0%, #ffd60a 100%);
+  }
+  
+  /* Iframe-specific utilities */
+  .iframe-safe {
+    position: relative !important;
+    z-index: auto !important;
+  }
+  
+  .iframe-container {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+}
+
+/* Additional iframe fixes */
+[data-iframe="true"] * {
+  box-sizing: border-box;
+}
+
+[data-iframe="true"] .min-h-screen {
+  min-height: 100vh !important;
+}
+
+[data-iframe="true"] .fixed {
+  position: absolute !important;
+}
+
+/* Ensure consistent font loading in iframes */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0.00%;
+  size-adjust: 107.12%;
 }
