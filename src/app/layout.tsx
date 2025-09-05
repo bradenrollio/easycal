@@ -9,12 +9,16 @@ const inter = Inter({
   display: "swap",
 });
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "Enrollio - Bulk Calendar Management",
   description: "Brand-aware bulk calendar management for your business",
   keywords: ["calendar", "management", "bulk", "scheduling", "business"],
   authors: [{ name: "Enrollio Team" }],
-  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
