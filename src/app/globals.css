@@ -1,6 +1,3 @@
-/* PINK PROBE - REMOVE AFTER CONFIRMING DEPLOYMENT */
-body { background: hotpink !important; }
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
