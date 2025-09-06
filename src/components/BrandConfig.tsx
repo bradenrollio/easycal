@@ -5,6 +5,7 @@ import { Palette, Type, Clock, AlertCircle } from 'lucide-react';
 import { BrandConfig } from '@/types/brand';
 import { validateColor, validateButtonText, validateTimezone } from '@/lib/utils/validation';
 import { getCommonTimezones } from '@/lib/utils/formatting';
+import { useToast } from '@/components/Toast';
 
 interface BrandConfigProps {
   locationId: string;
@@ -12,6 +13,7 @@ interface BrandConfigProps {
 }
 
 export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
+  const toast = useToast();
   const [config, setConfig] = useState<Partial<BrandConfig>>({
     locationId,
     primaryColorHex: '#FFC300',
@@ -112,13 +114,13 @@ export function BrandConfigComponent({ locationId, onSave }: BrandConfigProps) {
     // Validate file type
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      alert('Please upload a PNG, JPEG, JPG, or GIF image');
+      toast.error('Please upload a PNG, JPEG, JPG, or GIF image');
       return;
     }
 
     // Validate file size (2.5MB)
     if (file.size > 2.5 * 1024 * 1024) {
-      alert('Image must be smaller than 2.5MB');
+      toast.error('Image must be smaller than 2.5MB');
       return;
     }
 

@@ -96,6 +96,16 @@ export function parseGHLLocationFromURL(): string | null {
     console.log('Cannot access parent URL due to cross-origin restrictions');
   }
   
+  // Try to parse from the current URL if it contains the GHL pattern
+  // This can work if GHL passes the location in the iframe URL
+  const currentUrl = window.location.href;
+  const locationPattern = /[?&]location[_-]?[iI]?[dD]?=([^&]+)/;
+  const locationMatch = currentUrl.match(locationPattern);
+  if (locationMatch) {
+    console.log('Extracted location ID from current URL:', locationMatch[1]);
+    return locationMatch[1];
+  }
+  
   return null;
 }
 

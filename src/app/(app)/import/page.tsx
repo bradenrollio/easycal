@@ -4,11 +4,13 @@ import { useState, useCallback, useEffect, Suspense } from 'react';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Papa from 'papaparse';
+import { getLocationId } from '@/lib/api/ghl/context';
 import { Button } from '@/components/ui/button';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { FieldMapper } from '@/components/FieldMapper';
 import { TopBar } from '@/components/TopBar';
 import { DryRunPreview } from '@/components/DryRunPreview';
+import { useToast } from '@/components/Toast';
 
 interface CSVRow {
   [key: string]: string;
@@ -25,6 +27,7 @@ type ImportStep = 'upload' | 'map' | 'preview' | 'processing';
 function ImportContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [csvColumns, setCsvColumns] = useState<CSVColumn[]>([]);
@@ -32,17 +35,55 @@ function ImportContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [brandConfig, setBrandConfig] = useState(null);
   const [defaults, setDefaults] = useState(null);
+  const [locationId, setLocationId] = useState<string>('');
+  const [locationDetected, setLocationDetected] = useState(false);
 
-  // Get location ID from URL params
-  const locationId = searchParams.get('locationId') || 'temp_location';
-
-  // Load brand config and defaults on mount
+  // Detect location ID on mount
   useEffect(() => {
-    if (locationId) {
+    detectLocationId();
+  }, []);
+
+  // Load brand config and defaults when location is detected
+  useEffect(() => {
+    if (locationId && locationDetected) {
       loadBrandConfig();
       loadDefaults();
     }
-  }, [locationId]);
+  }, [locationId, locationDetected]);
+
+  const detectLocationId = async () => {
+    try {
+      console.log('Detecting location ID for import page...');
+      
+      // First check URL params
+      const urlLocationId = searchParams.get('locationId');
+      if (urlLocationId && urlLocationId !== 'temp_location') {
+        console.log('Location ID from URL params:', urlLocationId);
+        setLocationId(urlLocationId);
+        setLocationDetected(true);
+        return;
+      }
+      
+      // Use comprehensive location detection
+      const detectedLocationId = await getLocationId();
+      
+      if (detectedLocationId) {
+        console.log('Location ID detected for import:', detectedLocationId);
+        setLocationId(detectedLocationId);
+        // Update URL with location ID
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('locationId', detectedLocationId);
+        window.history.replaceState({}, '', newUrl.toString());
+      } else {
+        console.error('No location ID detected for import page');
+        // Don't set a fallback - we need a real location ID
+      }
+    } catch (error) {
+      console.error('Error detecting location ID for import:', error);
+    } finally {
+      setLocationDetected(true);
+    }
+  };
 
   const loadBrandConfig = async () => {
     try {
@@ -102,7 +143,7 @@ function ImportContent() {
       },
       error: (error) => {
         console.error('CSV parsing error:', error);
-        alert('Failed to parse CSV file. Please check the format and try again.');
+        toast.error('Failed to parse CSV file. Please check the format and try again.');
         setIsLoading(false);
       },
     });
@@ -160,7 +201,12 @@ function ImportContent() {
         const result = await response.json();
         console.log('Import completed:', result);
         
-        alert(`Import completed! ${result.summary.successful} calendars created/updated, ${result.summary.failed} failed.`);
+        // Show appropriate message based on results
+        if (result.summary.failed > 0) {
+          toast.warning(`Import completed: ${result.summary.successful} calendars created/updated, ${result.summary.failed} failed.`);
+        } else {
+          toast.success(`Import completed! ${result.summary.successful} calendars created/updated successfully.`);
+        }
         
         // Redirect to calendars page to see results
         router.push(`/calendars?locationId=${locationId}`);
@@ -171,7 +217,7 @@ function ImportContent() {
 
     } catch (error) {
       console.error('Import failed:', error);
-      alert(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setCurrentStep('preview');
     } finally {
       setIsLoading(false);

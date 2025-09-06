@@ -121,9 +121,18 @@ async function getLocationToken(locationId, env) {
     if (result.user_type === 'Company' && result.company_id) {
       console.log('Agency token detected, getting location-specific token...');
       try {
-        // Use the known location ID directly
-        const knownLocationId = 'HgTZdA5INm0uiGh9KvHC';
-        return await getLocationTokenDirect(accessToken, result.company_id, knownLocationId);
+        // For agency installations, use the actual location ID passed in
+        // Don't hardcode - each subaccount has its own location ID
+        const actualLocationId = locationId === 'temp_location' || locationId?.startsWith('temp_') || locationId?.startsWith('agency_') 
+          ? null // Return null to indicate we need a real location ID
+          : locationId;
+        
+        if (!actualLocationId) {
+          console.error('Cannot use agency token without a valid location ID');
+          return null;
+        }
+        
+        return await getLocationTokenDirect(accessToken, result.company_id, actualLocationId);
       } catch (error) {
         console.error('Error getting location token:', error);
         return null;
@@ -220,8 +229,8 @@ async function decryptToken(encryptedToken, encryptionKey) {
 // Handle listing calendars
 async function handleListCalendars(accessToken, locationId, corsHeaders) {
   try {
-    // For agency installations, we need to use the actual location ID, not the agency prefix
-    const actualLocationId = locationId.startsWith('agency_') ? 'HgTZdA5INm0uiGh9KvHC' : locationId;
+    // Use the actual location ID passed in - don't override it
+    const actualLocationId = locationId;
     
     console.log('Making GHL API call to list calendars for location:', actualLocationId);
     console.log('Original locationId:', locationId, 'Actual locationId:', actualLocationId);

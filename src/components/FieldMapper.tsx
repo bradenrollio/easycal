@@ -27,7 +27,7 @@ const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
   {
     field: 'calendar_type',
     required: true,
-    description: 'Calendar type (must be "Event Calendar")',
+    description: 'Calendar type (must be "Event Calendar" or "event")',
   },
   {
     field: 'calendar_name',
@@ -50,27 +50,32 @@ const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
     description: 'Custom URL slug (auto-generated if not provided)',
   },
   {
+    field: 'schedule_blocks',
+    required: false,
+    description: 'Schedule times (e.g., "Mon 09:00-10:00; Wed 14:30-15:30")',
+  },
+  {
     field: 'day_of_week',
-    required: true,
-    description: 'Day of the week (Monday, Tuesday, etc.)',
+    required: false,
+    description: 'Day of the week (Monday, Tuesday, etc.) - Alternative to schedule_blocks',
   },
   {
     field: 'time_of_week',
-    required: true,
-    description: 'Time of day in 24-hour format (e.g., 09:00, 14:30)',
+    required: false,
+    description: 'Time of day in 24-hour format (e.g., 09:00, 14:30) - Alternative to schedule_blocks',
   },
   {
-    field: 'slot_interval',
+    field: 'slot_interval_minutes',
     required: true,
-    description: 'Time slot interval in minutes (e.g., 30, 60)',
+    description: 'Time slot interval in minutes (e.g., 15, 30, 60)',
   },
   {
-    field: 'class_duration',
+    field: 'class_duration_minutes',
     required: true,
     description: 'Duration of each session in minutes',
   },
   {
-    field: 'min_scheduling_notice',
+    field: 'min_scheduling_notice_days',
     required: true,
     description: 'Minimum days notice required for booking',
   },
@@ -84,11 +89,91 @@ const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
     required: false,
     description: 'Number of spots available per time slot (default: 1)',
   },
+  {
+    field: 'button_text',
+    required: false,
+    description: 'Custom button text for calendar (e.g., "Book Now", "Reserve Spot")',
+  },
+  {
+    field: 'primary_color_hex',
+    required: false,
+    description: 'Primary color in hex format (e.g., #FFC300)',
+  },
+  {
+    field: 'background_color_hex',
+    required: false,
+    description: 'Background color in hex format (e.g., #FFFFFF)',
+  },
+  {
+    field: 'calendar_purpose',
+    required: false,
+    description: 'Purpose of calendar (trial, regular, makeup)',
+  },
 ];
+
+// Auto-detection patterns for field mapping
+const AUTO_DETECT_PATTERNS: Record<string, RegExp[]> = {
+  calendar_type: [/^(calendar[_\s]?)?type$/i, /^event[_\s]?type$/i],
+  calendar_name: [/^(calendar[_\s]?)?name$/i, /^title$/i, /^class[_\s]?name$/i],
+  class_description: [/^description$/i, /^class[_\s]?description$/i, /^desc$/i],
+  calendar_group: [/^(calendar[_\s]?)?group$/i, /^category$/i, /^group[_\s]?name$/i],
+  custom_url: [/^(custom[_\s]?)?url$/i, /^slug$/i, /^path$/i],
+  schedule_blocks: [/^schedule[_\s]?(blocks?|times?)$/i, /^times?$/i, /^schedule$/i],
+  day_of_week: [/^day([_\s]?of[_\s]?week)?$/i, /^weekday$/i, /^dow$/i],
+  time_of_week: [/^time([_\s]?of[_\s]?day)?$/i, /^start[_\s]?time$/i, /^time$/i],
+  slot_interval_minutes: [/^slot[_\s]?interval([_\s]?minutes?)?$/i, /^interval$/i, /^slot[_\s]?duration$/i],
+  class_duration_minutes: [/^(class[_\s]?)?duration([_\s]?minutes?)?$/i, /^length$/i, /^session[_\s]?duration$/i],
+  min_scheduling_notice_days: [/^min([_\s]?scheduling)?[_\s]?notice([_\s]?days?)?$/i, /^min[_\s]?notice$/i, /^advance[_\s]?notice$/i],
+  max_bookings_per_day: [/^max[_\s]?bookings?([_\s]?per[_\s]?day)?$/i, /^daily[_\s]?limit$/i, /^max[_\s]?daily$/i],
+  spots_per_booking: [/^spots?([_\s]?per[_\s]?booking)?$/i, /^capacity$/i, /^max[_\s]?participants$/i],
+  button_text: [/^button[_\s]?text$/i, /^cta[_\s]?text$/i, /^button[_\s]?label$/i],
+  primary_color_hex: [/^primary[_\s]?color([_\s]?hex)?$/i, /^main[_\s]?color$/i, /^brand[_\s]?color$/i],
+  background_color_hex: [/^background[_\s]?color([_\s]?hex)?$/i, /^bg[_\s]?color$/i, /^secondary[_\s]?color$/i],
+  calendar_purpose: [/^(calendar[_\s]?)?purpose$/i, /^type$/i, /^category$/i],
+};
+
+function autoDetectMapping(csvColumns: CSVColumn[]): Record<string, number | null> {
+  const detectedMappings: Record<string, number | null> = {};
+  
+  // Initialize all fields to null
+  CALENDAR_FIELDS.forEach(field => {
+    detectedMappings[field.field] = null;
+  });
+  
+  // Try to match CSV columns to fields
+  csvColumns.forEach((column, index) => {
+    const normalizedColumnName = column.name.trim();
+    
+    // Check each field's patterns
+    for (const [fieldName, patterns] of Object.entries(AUTO_DETECT_PATTERNS)) {
+      // Skip if already mapped
+      if (detectedMappings[fieldName] !== null) continue;
+      
+      // Check if any pattern matches
+      const matches = patterns.some(pattern => pattern.test(normalizedColumnName));
+      if (matches) {
+        detectedMappings[fieldName] = index;
+        break; // Stop checking other fields for this column
+      }
+    }
+  });
+  
+  return detectedMappings;
+}
 
 export function FieldMapper({ csvColumns, onMappingChange, initialMappings = {} }: FieldMapperProps) {
   const [mappings, setMappings] = useState<Record<string, number | null>>(initialMappings);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [hasAutoDetected, setHasAutoDetected] = useState(false);
+
+  // Auto-detect mappings on first load
+  useEffect(() => {
+    if (csvColumns.length > 0 && !hasAutoDetected && Object.keys(initialMappings).length === 0) {
+      const autoMappings = autoDetectMapping(csvColumns);
+      setMappings(autoMappings);
+      setHasAutoDetected(true);
+    }
+  }, [csvColumns, hasAutoDetected, initialMappings]);
 
   useEffect(() => {
     onMappingChange(mappings);
@@ -110,17 +195,47 @@ export function FieldMapper({ csvColumns, onMappingChange, initialMappings = {} 
   };
 
   const isValid = () => {
-    const requiredFields = CALENDAR_FIELDS.filter(f => f.required);
-    return requiredFields.every(field => mappings[field.field] !== null && mappings[field.field] !== undefined);
+    // Check if either schedule_blocks OR (day_of_week AND time_of_week) is mapped
+    const hasSchedule = mappings['schedule_blocks'] !== null && mappings['schedule_blocks'] !== undefined;
+    const hasDayAndTime = 
+      (mappings['day_of_week'] !== null && mappings['day_of_week'] !== undefined) &&
+      (mappings['time_of_week'] !== null && mappings['time_of_week'] !== undefined);
+    
+    const scheduleValid = hasSchedule || hasDayAndTime;
+    
+    // Check other required fields
+    const otherRequiredFields = CALENDAR_FIELDS
+      .filter(f => f.required && f.field !== 'day_of_week' && f.field !== 'time_of_week')
+      .every(field => mappings[field.field] !== null && mappings[field.field] !== undefined);
+    
+    return scheduleValid && otherRequiredFields;
+  };
+
+  const resetToAutoDetect = () => {
+    const autoMappings = autoDetectMapping(csvColumns);
+    setMappings(autoMappings);
   };
 
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <h3 className="font-medium text-blue-900 mb-2">Field Mapping Instructions</h3>
-        <p className="text-sm text-blue-700">
-          Map each CSV column to the corresponding calendar field. Required fields must be mapped to proceed.
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-medium text-blue-900 mb-2">Field Mapping Instructions</h3>
+            <p className="text-sm text-blue-700">
+              Map each CSV column to the corresponding calendar field. Auto-detection has been applied based on column names.
+            </p>
+            <p className="text-sm text-blue-700 mt-1">
+              <strong>Note:</strong> Use either &quot;Schedule Blocks&quot; OR both &quot;Day of Week&quot; and &quot;Time of Week&quot; fields.
+            </p>
+          </div>
+          <button
+            onClick={resetToAutoDetect}
+            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Auto-Detect Again
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">

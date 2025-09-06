@@ -1,7 +1,7 @@
-calendar_type,calendar_name,slot_interval_minutes,class_duration_minutes,min_scheduling_notice_days,max_bookings_per_day,schedule_blocks,calendar_group,class_description,custom_url,button_text,primary_color_hex,background_color_hex,calendar_purpose
-event,Tiny Tots (Ages 2–3),15,30,1,12,"Sat 09:00-09:30; Sat 10:00-10:30",Saturday Trials,Intro to movement for toddlers,tiny-tots,Reserve Spot,#FFC300,#FFFFFF,trial
-event,Advanced Yoga Flow,30,60,2,8,"Mon 18:00-19:00; Wed 18:00-19:00",Evening Classes,Challenging vinyasa flow for experienced practitioners,advanced-yoga,Book Class,,,regular
-event,Make-Up Class Portal,15,30,0,30,"Mon 15:00-17:00; Thu 15:00-17:00",Makeup Classes,Flexible scheduling for missed classes,makeup-portal,,#FFD60A,#FFFFFF,makeup
-event,Personal Training Session,60,60,3,5,"Wed 09:00-10:00",Personal Training,One-on-one fitness coaching,personal-training,Schedule Session,#FF6B35,#FFFFFF,regular
-event,Group Fitness Bootcamp,15,45,1,15,"Thu 19:00-19:45",Group Classes,High-intensity group workout,bootcamp,Join Bootcamp,,,regular
-event,Nutrition Consultation,30,30,5,3,"Fri 14:00-14:30",Consultations,Personalized nutrition planning session,nutrition-consult,Book Consultation,#4ECDC4,#FFFFFF,regular
+calendar_type,calendar_name,slot_interval_minutes,class_duration_minutes,min_scheduling_notice_days,max_bookings_per_day,schedule_blocks,day_of_week,time_of_week,calendar_group,class_description,custom_url,button_text,primary_color_hex,background_color_hex,calendar_purpose
+event,Tiny Tots (Ages 2–3),15,30,1,12,"Sat 09:00-09:30; Sat 10:00-10:30",,,Saturday Trials,Intro to movement for toddlers,tiny-tots,Reserve Spot,#FFC300,#FFFFFF,trial
+event,Advanced Yoga Flow,30,60,2,8,"Mon 18:00-19:00; Wed 18:00-19:00",,,Evening Classes,Challenging vinyasa flow for experienced practitioners,advanced-yoga,Book Class,,,regular
+event,Make-Up Class Portal,15,30,0,30,"Mon 15:00-17:00; Thu 15:00-17:00",,,Makeup Classes,Flexible scheduling for missed classes,makeup-portal,,#FFD60A,#FFFFFF,makeup
+event,Personal Training Session,60,60,3,5,,Wednesday,09:00,Personal Training,One-on-one fitness coaching,personal-training,Schedule Session,#FF6B35,#FFFFFF,regular
+event,Group Fitness Bootcamp,15,45,1,15,,Thursday,19:00,Group Classes,High-intensity group workout,bootcamp,Join Bootcamp,,,regular
+event,Nutrition Consultation,30,30,5,3,,Friday,14:00,Consultations,Personalized nutrition planning session,nutrition-consult,Book Consultation,#4ECDC4,#FFFFFF,regular

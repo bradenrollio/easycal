@@ -6,7 +6,8 @@ import { Search, Trash2, MoreHorizontal, CheckSquare, Square, Upload } from 'luc
 import { getLocationId } from '@/lib/api/ghl/context';
 import { Button } from '@/components/ui/button';
 import { Loading } from '@/components/Loading';
-import { MobileHeader } from '@/components/MobileHeader';
+import { TopBar } from '@/components/TopBar';
+import { useToast } from '@/components/Toast';
 
 interface Calendar {
   id: string;
@@ -20,6 +21,7 @@ interface Calendar {
 function CalendarsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [selectedCalendars, setSelectedCalendars] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,14 +136,13 @@ function CalendarsContent() {
     try {
       const calendarIds = Array.from(selectedCalendars);
       
-      const response = await fetch('/api/calendars', {
+      const response = await fetch(`/api/calendars?locationId=${locationId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          calendarIds,
-          locationId: locationId
+          calendarIds
         }),
       });
 
@@ -152,17 +153,18 @@ function CalendarsContent() {
         setCalendars(prev => prev.filter(cal => !result.success.includes(cal.id)));
         setSelectedCalendars(new Set());
         
-        alert(`Successfully deleted ${result.summary.deleted} calendars`);
+        toast.success(`Successfully deleted ${result.success.length} calendar(s)`);
         
         if (result.failed.length > 0) {
           console.warn('Some deletions failed:', result.failed);
+          toast.warning(`Failed to delete ${result.failed.length} calendar(s)`);
         }
       } else {
         throw new Error('Delete request failed');
       }
     } catch (error) {
       console.error('Bulk delete failed:', error);
-      alert('Failed to delete calendars. Please try again.');
+      toast.error('Failed to delete calendars. Please try again.');
     } finally {
       setIsLoading(false);
       setShowBulkDelete(false);
@@ -179,7 +181,10 @@ function CalendarsContent() {
 
   return (
     <div className="min-h-screen bg-white">
-      <MobileHeader title="Calendars" />
+      <TopBar 
+        showBackButton={true}
+        onBack={() => router.push('/')}
+      />
       
       <div className="flex-1 bg-white p-6 md:p-8 overflow-auto">
         {/* Header */}

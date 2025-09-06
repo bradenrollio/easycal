@@ -26,7 +26,11 @@ export interface CSVCalendarRow {
   class_duration_minutes: string;
   min_scheduling_notice_days: string;
   max_bookings_per_day: string;
-  schedule_blocks: string;
+  
+  // Schedule fields - either schedule_blocks OR day_of_week + time_of_week
+  schedule_blocks?: string;
+  day_of_week?: string;
+  time_of_week?: string;
   
   // Optional fields
   calendar_group?: string;

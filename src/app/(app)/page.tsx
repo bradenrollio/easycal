@@ -35,9 +35,8 @@ function DashboardContent() {
     // Fallback: if location detection takes too long, force show the UI
     const fallbackTimer = setTimeout(() => {
       if (!locationDetected) {
-        console.warn('Location detection timeout, showing UI with fallback');
-        const fallbackLocationId = 'HgTZdA5INm0uiGh9KvHC';
-        setLocationId(fallbackLocationId);
+        console.warn('Location detection timeout, cannot proceed without valid location');
+        // Don't set a fallback - we need a real location ID
         setLocationDetected(true);
       }
     }, 3000); // Reduced to 3 seconds
@@ -77,17 +76,12 @@ function DashboardContent() {
         setLocationId(detectedLocationId as string);
         window.history.replaceState({}, '', `/?locationId=${detectedLocationId}`);
       } else {
-        console.warn('No location ID detected, using fallback');
-        const fallbackLocationId = 'HgTZdA5INm0uiGh9KvHC';
-        setLocationId(fallbackLocationId);
-        window.history.replaceState({}, '', `/?locationId=${fallbackLocationId}`);
+        console.warn('No location ID detected');
+        // Don't set a fallback - we need a real location ID
       }
     } catch (error) {
       console.error('Error detecting location ID:', error);
-      // Use fallback location ID
-      const fallbackLocationId = 'HgTZdA5INm0uiGh9KvHC';
-      setLocationId(fallbackLocationId);
-      window.history.replaceState({}, '', `/?locationId=${fallbackLocationId}`);
+      // Don't set a fallback - we need a real location ID
     } finally {
       setLocationDetected(true);
     }

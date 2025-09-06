@@ -213,21 +213,46 @@ export function validateCSVRow(
     });
   }
   
-  // Validate schedule blocks (now required)
-  if (!row.schedule_blocks?.trim()) {
+  // Validate schedule - either schedule_blocks OR day_of_week + time_of_week
+  const hasScheduleBlocks = row.schedule_blocks?.trim();
+  const hasDayAndTime = row.day_of_week?.trim() && row.time_of_week?.trim();
+  
+  if (!hasScheduleBlocks && !hasDayAndTime) {
     errors.push({
       row: rowIndex,
-      field: 'schedule_blocks',
-      message: 'Schedule blocks are required. Use format: "Mon 09:00-10:00; Wed 14:30-15:30"',
+      field: 'schedule',
+      message: 'Either schedule_blocks OR both day_of_week and time_of_week are required',
       severity: 'error'
     });
-  } else {
-    const blocks = parseScheduleBlocks(row.schedule_blocks);
+  } else if (hasScheduleBlocks) {
+    const blocks = parseScheduleBlocks(row.schedule_blocks!);
     if (blocks.length === 0) {
       errors.push({
         row: rowIndex,
         field: 'schedule_blocks',
         message: 'Invalid schedule blocks format. Use "Mon 09:00-10:00; Wed 14:30-15:30"',
+        severity: 'error'
+      });
+    }
+  } else if (hasDayAndTime) {
+    // Validate time format for time_of_week
+    if (!isValidTime(row.time_of_week!)) {
+      errors.push({
+        row: rowIndex,
+        field: 'time_of_week',
+        message: 'Invalid time format. Use HH:MM format (e.g., 09:00, 14:30)',
+        severity: 'error'
+      });
+    }
+    
+    // Validate day of week
+    const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayCapitalized = row.day_of_week!.charAt(0).toUpperCase() + row.day_of_week!.slice(1).toLowerCase();
+    if (!validDays.includes(dayCapitalized)) {
+      errors.push({
+        row: rowIndex,
+        field: 'day_of_week',
+        message: 'Day must be one of: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday',
         severity: 'error'
       });
     }

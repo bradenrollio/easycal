@@ -1,4 +1,4 @@
-import { BrandConfig, CSVCalendarRow, CalendarPayload, CalendarDefaults } from '@/types/brand';
+import { BrandConfig, CSVCalendarRow, CalendarPayload, CalendarDefaults, ScheduleBlock } from '@/types/brand';
 import { parseScheduleBlocks, slugify } from '../utils/validation';
 
 // Apply branding rules with precedence
@@ -35,8 +35,27 @@ export function buildCalendarPayload(
   // Generate slug
   const slug = row.custom_url || slugify(row.calendar_name);
   
-  // Parse availability from schedule blocks
-  const blocks = parseScheduleBlocks(row.schedule_blocks);
+  // Parse availability from schedule blocks or day_of_week/time_of_week
+  let blocks: ScheduleBlock[];
+  if (row.schedule_blocks) {
+    blocks = parseScheduleBlocks(row.schedule_blocks);
+  } else if (row.day_of_week && row.time_of_week) {
+    // Create schedule_blocks from day_of_week and time_of_week
+    const duration = parseInt(row.class_duration_minutes) || 60;
+    const [hours, minutes] = row.time_of_week.split(':').map(Number);
+    const endHours = Math.floor((hours * 60 + minutes + duration) / 60);
+    const endMinutes = (hours * 60 + minutes + duration) % 60;
+    const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+    
+    blocks = [{
+      day: row.day_of_week.charAt(0).toUpperCase() + row.day_of_week.slice(1).toLowerCase(),
+      start: row.time_of_week,
+      end: endTime
+    }];
+  } else {
+    blocks = []; // This shouldn't happen if validation passes
+  }
+  
   const availability: CalendarPayload['availability'] = {
     weekly: blocks.map(block => ({
       day: block.day, // Keep full day format

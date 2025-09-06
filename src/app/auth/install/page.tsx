@@ -32,11 +32,17 @@ function AuthInstallContent() {
         }
 
         // Build OAuth URL
+        const clientId = process.env.NEXT_PUBLIC_GHL_CLIENT_ID || '68b96169e165955a7edc20b3-mf58ywbo';
+        const redirectUri = process.env.NEXT_PUBLIC_GHL_OAUTH_REDIRECT_URL || 
+          (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000/auth/callback'
+            : 'https://easycal.enrollio.ai/auth/callback');
+        
         const baseUrl = 'https://services.leadconnectorhq.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/authorize';
         const params = new URLSearchParams({
           response_type: 'code',
-          client_id: '68b96169e165955a7edc20b3-mf58ywbo',
-          redirect_uri: 'https://easycal.enrollio.ai/auth/callback',
+          client_id: clientId,
+          redirect_uri: redirectUri,
           scope: scopes.join(' '),
           state: state,
         });
