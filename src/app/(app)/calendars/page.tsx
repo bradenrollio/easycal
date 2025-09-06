@@ -67,7 +67,7 @@ function CalendarsContent() {
         window.history.replaceState({}, '', newUrl.toString());
       } else {
         console.warn('No location ID detected for calendars page');
-        setLocationId('temp_location'); // Fallback
+        // No fallback - require proper location detection
       }
     } catch (error) {
       console.error('Error detecting location ID for calendars:', error);

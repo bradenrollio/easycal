@@ -140,8 +140,8 @@ function DashboardContent() {
     }
   };
 
-  // FORCE SHOW DASHBOARD - Skip loading completely for debugging
-  const displayLocationId = locationId || 'agency_EnUqtThIwW8pdTLOvuO7';
+  // Use detected location ID or require proper detection
+  const displayLocationId = locationId || '';
 
   return (
     <div className="flex-1 bg-white overflow-auto">

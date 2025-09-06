@@ -151,7 +151,7 @@ function BulkActionsContent() {
     setShowLocationDropdown(false);
   };
 
-  const displayLocationId = locationId || 'agency_EnUqtThIwW8pdTLOvuO7';
+  const displayLocationId = locationId || '';
   const selectedLocation = locations.find(loc => loc.id === locationId);
 
   return (

@@ -13,7 +13,7 @@ function SettingsContent() {
   const [activeTab, setActiveTab] = useState<'brand' | 'defaults'>('brand');
 
   // Get location ID from URL params
-  const locationId = searchParams.get('locationId') || 'temp_location';
+  const locationId = searchParams.get('locationId') || '';
 
   const tabs = [
     { id: 'brand', label: 'Brand Config', icon: Palette },
