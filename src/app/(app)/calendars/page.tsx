@@ -129,12 +129,21 @@ function CalendarsContent() {
 
   // Handle bulk delete
   const handleBulkDelete = async () => {
-    if (selectedCalendars.size === 0) return;
+    if (selectedCalendars.size === 0) {
+      toast.warning('No calendars selected for deletion');
+      return;
+    }
 
     setIsLoading(true);
 
     try {
       const calendarIds = Array.from(selectedCalendars);
+      console.log('Deleting calendars with IDs:', calendarIds);
+      console.log('Selected calendars count:', calendarIds.length);
+      
+      // Double-check we're only sending selected IDs
+      const selectedCalendarDetails = calendars.filter(cal => calendarIds.includes(cal.id));
+      console.log('Calendars to be deleted:', selectedCalendarDetails.map(c => ({ id: c.id, name: c.name })));
       
       const response = await fetch(`/api/calendars?locationId=${locationId}`, {
         method: 'DELETE',
@@ -148,14 +157,16 @@ function CalendarsContent() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log('Delete operation result:', result);
         
         // Remove deleted calendars from state
-        setCalendars(prev => prev.filter(cal => !result.success.includes(cal.id)));
-        setSelectedCalendars(new Set());
+        if (result.success && result.success.length > 0) {
+          setCalendars(prev => prev.filter(cal => !result.success.includes(cal.id)));
+          setSelectedCalendars(new Set());
+          toast.success(`Successfully deleted ${result.success.length} calendar(s)`);
+        }
         
-        toast.success(`Successfully deleted ${result.success.length} calendar(s)`);
-        
-        if (result.failed.length > 0) {
+        if (result.failed && result.failed.length > 0) {
           console.warn('Some deletions failed:', result.failed);
           toast.warning(`Failed to delete ${result.failed.length} calendar(s)`);
         }
@@ -183,7 +194,7 @@ function CalendarsContent() {
     <div className="min-h-screen bg-white">
       <TopBar 
         showBackButton={true}
-        onBack={() => router.push('/')}
+        onBack={() => router.push(locationId ? `/?locationId=${locationId}` : '/')}
       />
       
       <div className="flex-1 bg-white p-6 md:p-8 overflow-auto">

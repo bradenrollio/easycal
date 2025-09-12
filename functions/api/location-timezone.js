@@ -60,7 +60,7 @@ export async function onRequest(context) {
       });
     }
     
-    // Fetch location details from GHL API
+    // Fetch location details from Enrollio's whitelabel API
     const ghlResponse = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}`, {
       headers: {
         'Authorization': `Bearer ${tokenData.accessToken}`,

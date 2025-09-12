@@ -18,7 +18,7 @@ import {
 const mobileNavItems = [
   {
     name: 'Dashboard',
-    href: '/',
+    href: '/dashboard',
     icon: Home,
   },
   {

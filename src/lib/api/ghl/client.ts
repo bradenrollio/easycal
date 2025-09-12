@@ -1,6 +1,6 @@
 /**
- * @fileoverview GoHighLevel API client for calendar operations
- * @description Provides a comprehensive client for interacting with the GoHighLevel
+ * @fileoverview CRM API client for calendar operations
+ * @description Provides a comprehensive client for interacting with the CRM
  * calendars API, including CRUD operations, group management, and bulk operations.
  * @author AI Assistant
  */
@@ -8,7 +8,7 @@
 import { CalendarPayload } from '@/types/brand';
 
 /**
- * GoHighLevel calendar group interface
+ * CRM calendar group interface
  */
 export interface GHLGroup {
   /** Unique group identifier */
@@ -22,7 +22,7 @@ export interface GHLGroup {
 }
 
 /**
- * GoHighLevel calendar interface
+ * CRM calendar interface
  */
 export interface GHLCalendar {
   /** Unique calendar identifier */
@@ -47,8 +47,8 @@ export interface GHLCalendar {
 }
 
 /**
- * GoHighLevel Calendar API Client
- * @description Handles all calendar-related operations with the GoHighLevel API.
+ * CRM Calendar API Client
+ * @description Handles all calendar-related operations with the CRM API.
  * Includes rate limiting, error handling, and retry logic.
  * 
  * @example
@@ -60,12 +60,12 @@ export interface GHLCalendar {
 export class GHLCalendarClient {
   private accessToken: string;
   private locationId: string;
-  private baseUrl = 'https://services.leadconnectorhq.com';
+  private baseUrl = 'https://services.enrollio.com';
 
   /**
    * Creates a new GHL Calendar API client
    * @param accessToken - OAuth access token for API authentication
-   * @param locationId - GoHighLevel location/sub-account ID
+   * @param locationId - CRM location/sub-account ID
    */
   constructor(accessToken: string, locationId: string) {
     this.accessToken = accessToken;
@@ -73,7 +73,7 @@ export class GHLCalendarClient {
   }
 
   /**
-   * Makes authenticated API request to GoHighLevel
+   * Makes authenticated API request to CRM
    * @private
    * @param endpoint - API endpoint path (e.g., '/calendars')
    * @param options - Fetch request options

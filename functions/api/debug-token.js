@@ -21,7 +21,7 @@ export async function onRequest(context) {
     
     // Get token from database
     const result = await env.DB.prepare(`
-      SELECT access_token, refresh_token, expires_at, scope
+      SELECT id, access_token, refresh_token, expires_at, scope
       FROM tokens 
       WHERE location_id = ? 
       ORDER BY expires_at DESC 
@@ -41,21 +41,67 @@ export async function onRequest(context) {
     
     // Check expiration
     const now = Math.floor(Date.now() / 1000);
-    const isExpired = result.expires_at <= now;
+    let isExpired = result.expires_at <= now;
     
     console.log('DEBUG: Token found, expires:', result.expires_at, 'now:', now, 'expired:', isExpired);
     
     if (isExpired) {
-      return new Response(JSON.stringify({
-        error: 'Token expired',
-        locationId: locationId,
-        expiresAt: result.expires_at,
-        currentTime: now,
-        debug: 'Token is expired'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      console.log('DEBUG: Token expired, attempting refresh...');
+      
+      // Decrypt refresh token
+      let refreshToken;
+      try {
+        refreshToken = await decryptToken(result.refresh_token, env.ENCRYPTION_KEY);
+      } catch (err) {
+        return new Response(JSON.stringify({
+          error: 'Failed to decrypt refresh token',
+          locationId: locationId,
+          debug: err.message
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      
+      // Refresh the token
+      const newTokenData = await refreshAccessToken(refreshToken, env);
+      
+      if (!newTokenData) {
+        return new Response(JSON.stringify({
+          error: 'Token refresh failed',
+          locationId: locationId,
+          expiresAt: result.expires_at,
+          currentTime: now,
+          debug: 'Failed to refresh expired token'
+        }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+      
+      // Update token in database
+      const encryptedTokens = await encryptTokens({
+        accessToken: newTokenData.access_token,
+        refreshToken: newTokenData.refresh_token || refreshToken
+      }, env.ENCRYPTION_KEY);
+      
+      await env.DB.prepare(`
+        UPDATE tokens 
+        SET access_token = ?, 
+            refresh_token = ?,
+            expires_at = ?
+        WHERE id = ?
+      `).bind(
+        encryptedTokens.accessToken,
+        encryptedTokens.refreshToken,
+        Math.floor((Date.now() + (newTokenData.expires_in * 1000)) / 1000),
+        result.id
+      ).run();
+      
+      console.log('DEBUG: Token refreshed successfully');
+      result.access_token = encryptedTokens.accessToken;
+      result.expires_at = Math.floor((Date.now() + (newTokenData.expires_in * 1000)) / 1000);
+      isExpired = false; // Token is now refreshed
     }
     
     // Try to decrypt token
@@ -77,6 +123,7 @@ export async function onRequest(context) {
     
     // Test GHL API call
     try {
+      // Use Enrollio's whitelabel API endpoint
       const ghlResponse = await fetch(`https://services.leadconnectorhq.com/calendars?locationId=${locationId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -172,5 +219,76 @@ async function decryptToken(encryptedToken, encryptionKey) {
   } catch (error) {
     console.error('Decryption error:', error);
     throw new Error(`Failed to decrypt token: ${error.message}`);
+  }
+}
+
+// Refresh an expired access token using the refresh token
+async function refreshAccessToken(refreshToken, env) {
+  try {
+    console.log('DEBUG: Refreshing access token...');
+    
+    // Use the correct OAuth token endpoint
+    const tokenResponse = await fetch('https://services.leadconnectorhq.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: env.HL_CLIENT_ID,
+        client_secret: env.HL_CLIENT_SECRET,
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        user_type: 'Location'
+      }).toString()
+    });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error('DEBUG: Token refresh failed:', tokenResponse.status, errorText);
+      return null;
+    }
+
+    const tokenData = await tokenResponse.json();
+    console.log('DEBUG: Token refreshed successfully');
+    
+    return tokenData;
+  } catch (error) {
+    console.error('DEBUG: Error refreshing token:', error);
+    return null;
+  }
+}
+
+// Encrypt tokens for storage
+async function encryptTokens(tokens, encryptionKey) {
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(encryptionKey.substring(0, 32)),
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
+
+    // Encrypt access token
+    const accessTokenIv = crypto.getRandomValues(new Uint8Array(12));
+    const encryptedAccessToken = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: accessTokenIv },
+      key,
+      new TextEncoder().encode(tokens.accessToken)
+    );
+
+    // Encrypt refresh token
+    const refreshTokenIv = crypto.getRandomValues(new Uint8Array(12));
+    const encryptedRefreshToken = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: refreshTokenIv },
+      key,
+      new TextEncoder().encode(tokens.refreshToken)
+    );
+
+    return {
+      accessToken: `${btoa(String.fromCharCode(...new Uint8Array(encryptedAccessToken)))}:${btoa(String.fromCharCode(...accessTokenIv))}`,
+      refreshToken: `${btoa(String.fromCharCode(...new Uint8Array(encryptedRefreshToken)))}:${btoa(String.fromCharCode(...refreshTokenIv))}`
+    };
+  } catch (error) {
+    console.error('DEBUG: Encryption error:', error);
+    throw new Error('Failed to encrypt tokens');
   }
 }

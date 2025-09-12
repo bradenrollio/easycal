@@ -12,7 +12,7 @@ export interface SDKClientOptions {
 }
 
 /**
- * Rate limiter configuration for GoHighLevel API
+ * Rate limiter configuration for CRM API
  */
 const rateLimiter = new Bottleneck({
   maxConcurrent: 3, // Max 3 concurrent requests
@@ -53,7 +53,7 @@ export class RateLimitError extends SDKError {
 /**
  * Enhanced SDK client with retry logic and token management
  */
-export class GoHighLevelClient {
+export class CRMClient {
   private client: any;
   private options: SDKClientOptions;
   private accessToken?: string;
@@ -266,7 +266,7 @@ export class GoHighLevelClient {
    * Generate OAuth authorization URL
    */
   getAuthorizationUrl(scopes: string[], state?: string): string {
-    const baseUrl = 'https://services.leadconnectorhq.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/authorize';
+    const baseUrl = 'https://app.enrollio.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/authorize';
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.options.clientId || process.env['HL_CLIENT_ID'] || '',
@@ -315,6 +315,6 @@ export class GoHighLevelClient {
 /**
  * Factory function to create SDK client
  */
-export function createSDKClient(options: SDKClientOptions): GoHighLevelClient {
-  return new GoHighLevelClient(options);
+export function createSDKClient(options: SDKClientOptions): CRMClient {
+  return new CRMClient(options);
 }

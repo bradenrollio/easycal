@@ -493,6 +493,7 @@ function generateId() {
 async function ensureGroup(groupName, locationId, accessToken) {
   try {
     // First, try to find existing group
+    // Use Enrollio's whitelabel API endpoint
     const groupsResponse = await fetch(`https://services.leadconnectorhq.com/calendars/groups?locationId=${locationId}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -519,6 +520,7 @@ async function ensureGroup(groupName, locationId, accessToken) {
       isActive: true
     };
 
+    // Use Enrollio's whitelabel API endpoint
     const createResponse = await fetch('https://services.leadconnectorhq.com/calendars/groups', {
       method: 'POST',
       headers: {
@@ -564,6 +566,7 @@ async function createOrUpdateCalendar(payload, accessToken) {
       // Try to create new calendar
       // Based on the error, it seems the endpoint exists but we're getting 404
       // This might be due to incorrect URL or missing parameters
+      // Use Enrollio's whitelabel API endpoint
       const response = await fetch(`https://services.leadconnectorhq.com/calendars/`, {
         method: 'POST',
         headers: {
@@ -599,6 +602,7 @@ async function createOrUpdateCalendar(payload, accessToken) {
 
 async function findCalendarBySlug(slug, locationId, accessToken) {
   try {
+    // Use Enrollio's whitelabel API endpoint
     const response = await fetch(`https://services.leadconnectorhq.com/calendars?locationId=${locationId}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,

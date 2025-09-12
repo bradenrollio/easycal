@@ -1,7 +1,7 @@
 /**
  * @fileoverview API type definitions
  * @description Centralized type definitions for all API interactions.
- * Includes GoHighLevel API types, request/response interfaces, and error types.
+ * Includes CRM API types, request/response interfaces, and error types.
  * @author AI Assistant
  */
 
@@ -32,7 +32,7 @@ export interface APIError {
 }
 
 /**
- * GoHighLevel API response types
+ * CRM API response types
  */
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace GHL {

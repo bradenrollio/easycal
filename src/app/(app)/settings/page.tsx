@@ -24,7 +24,7 @@ function SettingsContent() {
     <div className="min-h-screen bg-background">
       <TopBar 
         showBackButton={true}
-        onBack={() => router.push('/')}
+        onBack={() => router.push(locationId ? `/?locationId=${locationId}` : '/')}
       />
       <div className="container mx-auto px-4 py-6">
         <div className="max-w-4xl mx-auto">

@@ -5,7 +5,7 @@
  * @author AI Assistant
  */
 
-// GoHighLevel API exports
+// CRM API exports
 export * from './ghl/client';
 export * from './ghl/context';
 
@@ -19,7 +19,7 @@ export { AppError, ErrorCode, logger } from '../error-handler';
  * API configuration and constants
  */
 export const API_CONFIG = {
-  GHL_BASE_URL: 'https://services.leadconnectorhq.com',
+  GHL_BASE_URL: 'https://services.enrollio.com',
   GHL_API_VERSION: '2021-07-28',
   DEFAULT_TIMEOUT: 30000,
   MAX_RETRIES: 3,
@@ -41,7 +41,7 @@ export interface APIResponse<T = unknown> {
 /**
  * API client factory function
  * @param accessToken - OAuth access token
- * @param locationId - GoHighLevel location ID
+ * @param locationId - CRM location ID
  * @returns Configured API client
  */
 export function createAPIClient(accessToken: string, locationId: string) {

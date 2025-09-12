@@ -20,6 +20,13 @@ export async function onRequest(context) {
     }
     
     // Exchange code for token
+    console.log('Exchanging code for token with params:', {
+      client_id: env.HL_CLIENT_ID,
+      redirect_uri: env.OAUTH_REDIRECT_URL,
+      code_length: code.length
+    });
+    
+    // Use the correct OAuth token endpoint
     const tokenResponse = await fetch('https://services.leadconnectorhq.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -36,11 +43,23 @@ export async function onRequest(context) {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('Token exchange failed:', tokenResponse.status, errorText);
+      
+      // Parse error for better messaging
+      let errorMessage = `Status: ${tokenResponse.status}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error_description || errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
+      }
+      
       return new Response(`
         <!DOCTYPE html>
         <html><body>
           <h1>Token Exchange Failed</h1>
-          <p>Error: ${tokenResponse.status}</p>
+          <p>Error: ${errorMessage}</p>
+          <p><small>Please ensure you have authorized the application and try again.</small></p>
+          <p><a href="/">Return to EasyCal</a></p>
         </body></html>
       `, { status: 400, headers: { 'Content-Type': 'text/html' } });
     }

@@ -20,8 +20,8 @@ export function getGHLContext(): Promise<GHLContext | null> {
 
     // Listen for context message
     const handleMessage = (event: MessageEvent) => {
-      // Ensure message is from GHL domain
-      if (!event.origin.includes('gohighlevel.com') && !event.origin.includes('leadconnectorhq.com')) {
+      // Ensure message is from CRM/Enrollio domain
+      if (!event.origin.includes('enrollio.com') && !event.origin.includes('enrollio.ai') && !event.origin.includes('app.enrollio.com')) {
         return;
       }
 

@@ -10,26 +10,32 @@ function AuthInstallContent() {
     const initiateOAuth = async () => {
       try {
         const installType = searchParams.get('type') || 'location';
+        const locationId = searchParams.get('locationId');
         
-        // Generate state for CSRF protection
-        const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        // Generate state for CSRF protection with locationId if provided
+        const stateData = {
+          random: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+          locationId: locationId || null
+        };
+        const state = btoa(JSON.stringify(stateData));
         
         // Store state in localStorage for verification
         localStorage.setItem('oauth_state', state);
         
-        // Build scopes
+        // Build scopes - include all required scopes
         const scopes = [
           'calendars.readonly',
           'calendars.write',
+          'oauth.readonly',
+          'oauth.write',
           'calendars/groups.write',
           'calendars/groups.readonly',
           'calendars/events.readonly',
-          'calendars/events.write'
+          'calendars/events.write',
+          'locations.readonly',
+          'locations/customFields.write',
+          'locations/customFields.readonly'
         ];
-
-        if (installType === 'agency') {
-          scopes.push('oauth.readonly', 'oauth.write');
-        }
 
         // Build OAuth URL
         const clientId = process.env.NEXT_PUBLIC_GHL_CLIENT_ID || '68b96169e165955a7edc20b3-mf58ywbo';
@@ -38,13 +44,15 @@ function AuthInstallContent() {
             ? 'http://localhost:3000/auth/callback'
             : 'https://easycal.enrollio.ai/auth/callback');
         
-        const baseUrl = 'https://services.leadconnectorhq.com/oauth/clients/68b96169e165955a7edc20b3/authentication/oauth2/authorize';
+        // Use whitelabel marketplace URL to bypass login screen
+        const baseUrl = 'https://marketplace.enrollio.com/oauth/chooselocation';
         const params = new URLSearchParams({
           response_type: 'code',
           client_id: clientId,
           redirect_uri: redirectUri,
           scope: scopes.join(' '),
           state: state,
+          version_id: '68b96169e165955a7edc20b3',
         });
 
         const authUrl = `${baseUrl}?${params.toString()}`;

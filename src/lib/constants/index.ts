@@ -21,7 +21,7 @@ export const APP_CONFIG = {
  * API configuration constants
  */
 export const API_CONSTANTS = {
-  GHL_BASE_URL: 'https://services.leadconnectorhq.com',
+  GHL_BASE_URL: 'https://services.enrollio.com',
   GHL_API_VERSION: '2021-07-28',
   DEFAULT_TIMEOUT: 30000,
   MAX_RETRIES: 3,

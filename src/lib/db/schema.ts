@@ -27,11 +27,11 @@ export const tenants = sqliteTable('tenants', {
 
 /**
  * Locations table - represents sub-accounts/locations within a tenant
- * @description Stores GoHighLevel location/sub-account information.
+ * @description Stores CRM location/sub-account information.
  * Each location can have its own calendars and brand settings.
  */
 export const locations = sqliteTable('locations', {
-  /** GoHighLevel location ID */
+  /** CRM location ID */
   id: text('id').primaryKey(),
   /** Reference to parent tenant */
   tenantId: text('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
@@ -48,7 +48,7 @@ export const locations = sqliteTable('locations', {
 
 /**
  * Tokens table - encrypted OAuth tokens per location
- * @description Stores encrypted GoHighLevel OAuth access and refresh tokens.
+ * @description Stores encrypted CRM OAuth access and refresh tokens.
  * Supports both agency-level and location-specific tokens.
  */
 export const tokens = sqliteTable('tokens', {

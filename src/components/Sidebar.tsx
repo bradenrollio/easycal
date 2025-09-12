@@ -28,7 +28,7 @@ interface SidebarProps {
 const navigationItems = [
   {
     name: 'Dashboard',
-    href: '/',
+    href: '/dashboard',
     icon: Home,
   },
   {
