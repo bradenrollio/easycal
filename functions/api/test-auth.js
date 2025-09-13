@@ -135,8 +135,65 @@ async function getLocationToken(locationId, env) {
     
     const now = Math.floor(Date.now() / 1000);
     if (result.expires_at <= now) {
-      console.warn('Token expired for location:', locationId);
-      return null;
+      console.warn('Token expired for location:', locationId, '- attempting to refresh...');
+      
+      // Decrypt refresh token
+      try {
+        const refreshToken = await decryptToken(result.refresh_token, env.ENCRYPTION_KEY);
+        
+        // Attempt to refresh the token
+        const tokenResponse = await fetch('https://services.leadconnectorhq.com/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: env.HL_CLIENT_ID,
+            client_secret: env.HL_CLIENT_SECRET,
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            user_type: 'Location'
+          }).toString()
+        });
+
+        if (!tokenResponse.ok) {
+          const errorText = await tokenResponse.text();
+          console.error('Token refresh failed:', tokenResponse.status, errorText);
+          return null;
+        }
+
+        const newTokenData = await tokenResponse.json();
+        console.log('Token refreshed successfully');
+        
+        // Encrypt and update the token in the database
+        const encryptedTokens = await encryptTokens({
+          accessToken: newTokenData.access_token,
+          refreshToken: newTokenData.refresh_token || refreshToken
+        }, env.ENCRYPTION_KEY);
+        
+        // Update the token in the database
+        await env.DB.prepare(`
+          UPDATE tokens 
+          SET access_token = ?, 
+              refresh_token = ?,
+              expires_at = ?
+          WHERE location_id = ?
+        `).bind(
+          encryptedTokens.accessToken,
+          encryptedTokens.refreshToken,
+          Math.floor((Date.now() + (newTokenData.expires_in * 1000)) / 1000),
+          locationId
+        ).run();
+        
+        console.log('Token refreshed and updated in database for location:', locationId);
+        
+        return {
+          accessToken: newTokenData.access_token,
+          refreshToken: newTokenData.refresh_token || refreshToken,
+          expiresAt: Math.floor((Date.now() + (newTokenData.expires_in * 1000)) / 1000)
+        };
+      } catch (refreshError) {
+        console.error('Failed to refresh token:', refreshError);
+        return null;
+      }
     }
     
     const accessToken = await decryptToken(result.access_token, env.ENCRYPTION_KEY);
@@ -178,5 +235,42 @@ async function decryptToken(encryptedToken, encryptionKey) {
   } catch (error) {
     console.error('Decryption error:', error);
     throw new Error('Failed to decrypt token');
+  }
+}
+
+// Encrypt tokens for storage
+async function encryptTokens(tokens, encryptionKey) {
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(encryptionKey.substring(0, 32)),
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
+
+    // Encrypt access token
+    const accessTokenIv = crypto.getRandomValues(new Uint8Array(12));
+    const encryptedAccessToken = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: accessTokenIv },
+      key,
+      new TextEncoder().encode(tokens.accessToken)
+    );
+
+    // Encrypt refresh token
+    const refreshTokenIv = crypto.getRandomValues(new Uint8Array(12));
+    const encryptedRefreshToken = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: refreshTokenIv },
+      key,
+      new TextEncoder().encode(tokens.refreshToken)
+    );
+
+    return {
+      accessToken: `${btoa(String.fromCharCode(...new Uint8Array(encryptedAccessToken)))}:${btoa(String.fromCharCode(...accessTokenIv))}`,
+      refreshToken: `${btoa(String.fromCharCode(...new Uint8Array(encryptedRefreshToken)))}:${btoa(String.fromCharCode(...refreshTokenIv))}`
+    };
+  } catch (error) {
+    console.error('Encryption error:', error);
+    throw new Error('Failed to encrypt tokens');
   }
 }
