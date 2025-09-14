@@ -194,15 +194,7 @@ export function validateCSVRow(
 ): ValidationError[] {
   const errors: ValidationError[] = [];
   
-  // Required field validation
-  if (!row.calendar_type || row.calendar_type.toLowerCase() !== 'event') {
-    errors.push({
-      row: rowIndex,
-      field: 'calendar_type',
-      message: 'Calendar type must be "event"',
-      severity: 'error'
-    });
-  }
+  // Calendar type is always 'event' - no need to validate, it's set automatically
   
   if (!row.calendar_name?.trim()) {
     errors.push({

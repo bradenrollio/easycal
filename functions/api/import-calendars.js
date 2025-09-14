@@ -214,39 +214,22 @@ export async function onRequest(context) {
 function validateCSVRow(row, rowIndex) {
   const errors = [];
   
-  if (!row.calendar_type || row.calendar_type.toLowerCase() !== 'event') {
-    errors.push({ row: rowIndex, field: 'calendar_type', message: 'Calendar type must be "event"', severity: 'error' });
-  }
+  // Calendar type is always 'event' - no need to validate
   
   if (!row.calendar_name?.trim()) {
     errors.push({ row: rowIndex, field: 'calendar_name', message: 'Calendar name is required', severity: 'error' });
   }
   
-  // Check for either schedule_blocks OR day_of_week + time_of_week
+  // Schedule blocks are required
   const hasScheduleBlocks = row.schedule_blocks?.trim();
-  const hasDayAndTime = row.day_of_week?.trim() && row.time_of_week?.trim();
   
-  if (!hasScheduleBlocks && !hasDayAndTime) {
+  if (!hasScheduleBlocks) {
     errors.push({ 
       row: rowIndex, 
-      field: 'schedule', 
-      message: 'Either schedule_blocks OR both day_of_week and time_of_week are required', 
+      field: 'schedule_blocks', 
+      message: 'Schedule blocks are required. Format: "Day HH:MM-HH:MM" separated by semicolons (e.g., "Mon 09:00-17:00; Wed 14:00-18:00")', 
       severity: 'error' 
     });
-  }
-  
-  // If using day_of_week and time_of_week, create schedule_blocks
-  if (!hasScheduleBlocks && hasDayAndTime) {
-    // Convert day_of_week and time_of_week to schedule_blocks format
-    const dayAbbr = row.day_of_week.substring(0, 3); // Mon, Tue, Wed, etc.
-    const startTime = row.time_of_week;
-    // Calculate end time based on class duration
-    const duration = parseInt(row.class_duration_minutes) || 60;
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const endHours = Math.floor((hours * 60 + minutes + duration) / 60);
-    const endMinutes = (hours * 60 + minutes + duration) % 60;
-    const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-    row.schedule_blocks = `${dayAbbr} ${startTime}-${endTime}`;
   }
   
   const slotInterval = parseInt(row.slot_interval_minutes);

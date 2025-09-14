@@ -25,11 +25,6 @@ interface FieldMapperProps {
 
 const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
   {
-    field: 'calendar_type',
-    required: true,
-    description: 'Calendar type (must be "Event Calendar" or "event")',
-  },
-  {
     field: 'calendar_name',
     required: true,
     description: 'The display name for the calendar (e.g., class name)',
@@ -51,18 +46,8 @@ const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
   },
   {
     field: 'schedule_blocks',
-    required: false,
-    description: 'Schedule times (e.g., "Mon 09:00-10:00; Wed 14:30-15:30")',
-  },
-  {
-    field: 'day_of_week',
-    required: false,
-    description: 'Day of the week (Monday, Tuesday, etc.) - Alternative to schedule_blocks',
-  },
-  {
-    field: 'time_of_week',
-    required: false,
-    description: 'Time of day in 24-hour format (e.g., 09:00, 14:30) - Alternative to schedule_blocks',
+    required: true,
+    description: 'Schedule times - Format: "Day HH:MM-HH:MM" separated by semicolons. Example: "Mon 09:00-17:00; Tue 09:00-17:00; Wed 09:00-17:00". Days: Mon, Tue, Wed, Thu, Fri, Sat, Sun.',
   },
   {
     field: 'slot_interval_minutes',
@@ -113,14 +98,11 @@ const CALENDAR_FIELDS: Omit<FieldMapping, 'columnIndex'>[] = [
 
 // Auto-detection patterns for field mapping
 const AUTO_DETECT_PATTERNS: Record<string, RegExp[]> = {
-  calendar_type: [/^(calendar[_\s]?)?type$/i, /^event[_\s]?type$/i],
   calendar_name: [/^(calendar[_\s]?)?name$/i, /^title$/i, /^class[_\s]?name$/i],
   class_description: [/^description$/i, /^class[_\s]?description$/i, /^desc$/i],
   calendar_group: [/^(calendar[_\s]?)?group$/i, /^category$/i, /^group[_\s]?name$/i],
   custom_url: [/^(custom[_\s]?)?url$/i, /^slug$/i, /^path$/i],
-  schedule_blocks: [/^schedule[_\s]?(blocks?|times?)$/i, /^times?$/i, /^schedule$/i],
-  day_of_week: [/^day([_\s]?of[_\s]?week)?$/i, /^weekday$/i, /^dow$/i],
-  time_of_week: [/^time([_\s]?of[_\s]?day)?$/i, /^start[_\s]?time$/i, /^time$/i],
+  schedule_blocks: [/^schedule[_\s]?(blocks?|times?)$/i, /^times?$/i, /^schedule$/i, /^day([_\s]?of[_\s]?week)?$/i, /^weekday$/i, /^dow$/i, /^time([_\s]?of[_\s]?day)?$/i, /^start[_\s]?time$/i, /^time$/i],
   slot_interval_minutes: [/^slot[_\s]?interval([_\s]?minutes?)?$/i, /^interval$/i, /^slot[_\s]?duration$/i],
   class_duration_minutes: [/^(class[_\s]?)?duration([_\s]?minutes?)?$/i, /^length$/i, /^session[_\s]?duration$/i],
   min_scheduling_notice_days: [/^min([_\s]?scheduling)?[_\s]?notice([_\s]?days?)?$/i, /^min[_\s]?notice$/i, /^advance[_\s]?notice$/i],
@@ -195,20 +177,10 @@ export function FieldMapper({ csvColumns, onMappingChange, initialMappings = {} 
   };
 
   const isValid = () => {
-    // Check if either schedule_blocks OR (day_of_week AND time_of_week) is mapped
-    const hasSchedule = mappings['schedule_blocks'] !== null && mappings['schedule_blocks'] !== undefined;
-    const hasDayAndTime = 
-      (mappings['day_of_week'] !== null && mappings['day_of_week'] !== undefined) &&
-      (mappings['time_of_week'] !== null && mappings['time_of_week'] !== undefined);
-    
-    const scheduleValid = hasSchedule || hasDayAndTime;
-    
-    // Check other required fields
-    const otherRequiredFields = CALENDAR_FIELDS
-      .filter(f => f.required && f.field !== 'day_of_week' && f.field !== 'time_of_week')
+    // Check all required fields are mapped
+    return CALENDAR_FIELDS
+      .filter(f => f.required)
       .every(field => mappings[field.field] !== null && mappings[field.field] !== undefined);
-    
-    return scheduleValid && otherRequiredFields;
   };
 
   const resetToAutoDetect = () => {
@@ -225,8 +197,8 @@ export function FieldMapper({ csvColumns, onMappingChange, initialMappings = {} 
             <p className="text-sm text-blue-700">
               Map each CSV column to the corresponding calendar field. Auto-detection has been applied based on column names.
             </p>
-            <p className="text-sm text-blue-700 mt-1">
-              <strong>Note:</strong> Use either &quot;Schedule Blocks&quot; OR both &quot;Day of Week&quot; and &quot;Time of Week&quot; fields.
+            <p className="text-xs text-blue-600 mt-2">
+              <strong>Note:</strong> All calendars are automatically created as &quot;Event&quot; type calendars. You don&apos;t need to specify calendar type in your CSV.
             </p>
           </div>
           <button
@@ -325,6 +297,48 @@ export function FieldMapper({ csvColumns, onMappingChange, initialMappings = {} 
           );
         })}
       </div>
+
+      {/* Missing Fields Section */}
+      {!isValid() && (
+        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <h3 className="font-medium text-amber-900 mb-2">Missing Required Fields</h3>
+          <p className="text-sm text-amber-700 mb-3">
+            Please map the following required fields to enable the Review Import button:
+          </p>
+          <ul className="space-y-1">
+            {CALENDAR_FIELDS
+              .filter(f => f.required && (mappings[f.field] === null || mappings[f.field] === undefined))
+              .map(field => (
+                <li key={field.field} className="flex items-start">
+                  <span className="text-amber-600 mr-2">•</span>
+                  <div>
+                    <span className="font-medium text-amber-900">
+                      {field.field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
+                    <span className="text-sm text-amber-700 ml-2">
+                      - {field.description}
+                    </span>
+                  </div>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {isValid() && (
+        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center">
+            <Check className="w-5 h-5 text-green-600 mr-2" />
+            <div>
+              <h3 className="font-medium text-green-900">All Required Fields Mapped</h3>
+              <p className="text-sm text-green-700 mt-1">
+                Your field mappings are complete. You can now proceed to review the import.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between pt-6 border-t">
         <div className="text-sm text-muted-foreground">

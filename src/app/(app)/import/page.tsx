@@ -225,9 +225,9 @@ function ImportContent() {
   };
 
   const canProceedToReview = () => {
-    // Check if all required fields are mapped
-    const requiredFields = ['calendar_type', 'calendar_name', 'slot_interval_minutes', 'class_duration_minutes', 'min_scheduling_notice_days', 'max_bookings_per_day', 'schedule_blocks'];
-    return requiredFields.every(field => fieldMappings[field] !== null);
+    // Check if all required fields are mapped (calendar_type is always 'event' so not required)
+    const requiredFields = ['calendar_name', 'schedule_blocks', 'slot_interval_minutes', 'class_duration_minutes', 'min_scheduling_notice_days', 'max_bookings_per_day'];
+    return requiredFields.every(field => fieldMappings[field] !== null && fieldMappings[field] !== undefined);
   };
 
   const renderUploadStep = () => (
@@ -257,8 +257,8 @@ function ImportContent() {
           {' '}with all required fields for your calendars.
         </p>
         <div className="text-xs text-muted-foreground mt-2">
-          <strong>Required fields:</strong> calendar_type, calendar_name, slot_interval_minutes, class_duration_minutes, min_scheduling_notice_days, max_bookings_per_day, schedule_blocks<br/>
-          <strong>Optional fields:</strong> calendar_group, class_description, custom_url, button_text, primary_color_hex, background_color_hex, calendar_purpose
+          <strong>Required fields:</strong> calendar_name, schedule_blocks, slot_interval_minutes, class_duration_minutes, min_scheduling_notice_days, max_bookings_per_day<br/>
+          <strong>Optional fields:</strong> calendar_group, class_description, custom_url, button_text, primary_color_hex, background_color_hex, calendar_purpose, spots_per_booking
         </div>
       </div>
     </div>
