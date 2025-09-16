@@ -186,16 +186,81 @@ export async function generateUniqueSlug(
   return slug;
 }
 
+// Validate schedule blocks format strictly
+export function validateScheduleBlocksFormat(scheduleStr: string): { valid: boolean; error?: string } {
+  if (!scheduleStr?.trim()) {
+    return { valid: false, error: 'Schedule blocks are required' };
+  }
+
+  const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const segments = scheduleStr.split(';').map(s => s.trim()).filter(s => s);
+
+  if (segments.length === 0) {
+    return { valid: false, error: 'No valid schedule blocks found' };
+  }
+
+  const errors: string[] = [];
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+
+    // Check exact format: "Day HH:MM-HH:MM"
+    const formatMatch = segment.match(/^(\w+)\s(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/);
+
+    if (!formatMatch) {
+      errors.push(`Segment ${i + 1} "${segment}" doesn't match required format "Day HH:MM-HH:MM"`);
+      continue;
+    }
+
+    const [, day, startTime, endTime] = formatMatch;
+
+    // Validate day
+    if (!validDays.includes(day)) {
+      errors.push(`Segment ${i + 1}: "${day}" is not a valid day. Use: ${validDays.join(', ')}`);
+    }
+
+    // Validate time format
+    const validateTime = (time: string) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
+    };
+
+    if (!validateTime(startTime)) {
+      errors.push(`Segment ${i + 1}: Invalid start time "${startTime}". Use 24-hour format (00:00-23:59)`);
+    }
+
+    if (!validateTime(endTime)) {
+      errors.push(`Segment ${i + 1}: Invalid end time "${endTime}". Use 24-hour format (00:00-23:59)`);
+    }
+
+    // Validate that end time is after start time
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (endMinutes <= startMinutes) {
+      errors.push(`Segment ${i + 1}: End time must be after start time`);
+    }
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, error: errors.join('; ') };
+  }
+
+  return { valid: true };
+}
+
 // Validate CSV row
 export function validateCSVRow(
-  row: CSVCalendarRow, 
-  rowIndex: number, 
+  row: CSVCalendarRow,
+  rowIndex: number,
   brandConfig?: BrandConfig
 ): ValidationError[] {
   const errors: ValidationError[] = [];
-  
+
   // Calendar type is always 'event' - no need to validate, it's set automatically
-  
+
   if (!row.calendar_name?.trim()) {
     errors.push({
       row: rowIndex,
@@ -204,11 +269,11 @@ export function validateCSVRow(
       severity: 'error'
     });
   }
-  
-  // Validate schedule - either schedule_blocks OR day_of_week + time_of_week
+
+  // Validate schedule blocks format strictly
   const hasScheduleBlocks = row.schedule_blocks?.trim();
   const hasDayAndTime = row.day_of_week?.trim() && row.time_of_week?.trim();
-  
+
   if (!hasScheduleBlocks && !hasDayAndTime) {
     errors.push({
       row: rowIndex,
@@ -217,12 +282,12 @@ export function validateCSVRow(
       severity: 'error'
     });
   } else if (hasScheduleBlocks) {
-    const blocks = parseScheduleBlocks(row.schedule_blocks!);
-    if (blocks.length === 0) {
+    const validation = validateScheduleBlocksFormat(row.schedule_blocks!);
+    if (!validation.valid) {
       errors.push({
         row: rowIndex,
         field: 'schedule_blocks',
-        message: 'Invalid schedule blocks format. Use "Mon 09:00-10:00; Wed 14:30-15:30"',
+        message: `Invalid schedule blocks: ${validation.error}. Required format: "Day HH:MM-HH:MM" separated by semicolons. Days: Mon, Tue, Wed, Thu, Fri, Sat, Sun. Example: "Mon 09:00-17:00; Tue 09:00-17:00"`,
         severity: 'error'
       });
     }

@@ -8,11 +8,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Home, 
-  Calendar, 
-  Upload, 
-  Settings
+import {
+  Home,
+  Calendar,
+  Upload,
+  Settings,
+  Clock
 } from 'lucide-react';
 
 const mobileNavItems = [
@@ -25,6 +26,11 @@ const mobileNavItems = [
     name: 'Import',
     href: '/import',
     icon: Upload,
+  },
+  {
+    name: 'Schedule',
+    href: '/schedule-builder',
+    icon: Clock,
   },
   {
     name: 'Calendars',

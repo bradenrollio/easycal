@@ -211,24 +211,88 @@ export async function onRequest(context) {
 }
 
 // Helper functions
+function validateScheduleBlocksFormat(scheduleStr) {
+  if (!scheduleStr?.trim()) {
+    return { valid: false, error: 'Schedule blocks are required' };
+  }
+
+  const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const segments = scheduleStr.split(';').map(s => s.trim()).filter(s => s);
+
+  if (segments.length === 0) {
+    return { valid: false, error: 'No valid schedule blocks found' };
+  }
+
+  const errors = [];
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+
+    // Check exact format: "Day HH:MM-HH:MM"
+    const formatMatch = segment.match(/^(\w+)\s(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/);
+
+    if (!formatMatch) {
+      errors.push(`Segment ${i + 1} "${segment}" doesn't match required format "Day HH:MM-HH:MM"`);
+      continue;
+    }
+
+    const [, day, startTime, endTime] = formatMatch;
+
+    // Validate day
+    if (!validDays.includes(day)) {
+      errors.push(`Segment ${i + 1}: "${day}" is not a valid day. Use: ${validDays.join(', ')}`);
+    }
+
+    // Validate time format
+    const validateTime = (time) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
+    };
+
+    if (!validateTime(startTime)) {
+      errors.push(`Segment ${i + 1}: Invalid start time "${startTime}". Use 24-hour format (00:00-23:59)`);
+    }
+
+    if (!validateTime(endTime)) {
+      errors.push(`Segment ${i + 1}: Invalid end time "${endTime}". Use 24-hour format (00:00-23:59)`);
+    }
+
+    // Validate that end time is after start time
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (endMinutes <= startMinutes) {
+      errors.push(`Segment ${i + 1}: End time must be after start time`);
+    }
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, error: errors.join('; ') };
+  }
+
+  return { valid: true };
+}
+
 function validateCSVRow(row, rowIndex) {
   const errors = [];
-  
+
   // Calendar type is always 'event' - no need to validate
-  
+
   if (!row.calendar_name?.trim()) {
     errors.push({ row: rowIndex, field: 'calendar_name', message: 'Calendar name is required', severity: 'error' });
   }
-  
-  // Schedule blocks are required
-  const hasScheduleBlocks = row.schedule_blocks?.trim();
-  
-  if (!hasScheduleBlocks) {
-    errors.push({ 
-      row: rowIndex, 
-      field: 'schedule_blocks', 
-      message: 'Schedule blocks are required. Format: "Day HH:MM-HH:MM" separated by semicolons (e.g., "Mon 09:00-17:00; Wed 14:00-18:00")', 
-      severity: 'error' 
+
+  // Validate schedule blocks format
+  const scheduleValidation = validateScheduleBlocksFormat(row.schedule_blocks);
+
+  if (!scheduleValidation.valid) {
+    errors.push({
+      row: rowIndex,
+      field: 'schedule_blocks',
+      message: `Invalid schedule blocks format: ${scheduleValidation.error}. Required format: "Day HH:MM-HH:MM" separated by semicolons. Days: Mon, Tue, Wed, Thu, Fri, Sat, Sun. Example: "Mon 09:00-17:00; Tue 09:00-17:00"`,
+      severity: 'error'
     });
   }
   

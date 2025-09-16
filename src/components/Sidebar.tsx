@@ -9,13 +9,14 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Home, 
-  Calendar, 
-  Upload, 
-  Settings, 
+import {
+  Home,
+  Calendar,
+  Upload,
+  Settings,
   BarChart3,
-  User
+  User,
+  Clock
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -35,6 +36,11 @@ const navigationItems = [
     name: 'Import Calendars',
     href: '/import',
     icon: Upload,
+  },
+  {
+    name: 'Schedule Builder',
+    href: '/schedule-builder',
+    icon: Clock,
   },
   {
     name: 'Manage Calendars',

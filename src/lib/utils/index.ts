@@ -12,6 +12,7 @@ export {
   validateTimezone,
   validateBrandConfig,
   validateCSVRow,
+  validateScheduleBlocksFormat,
   parseScheduleBlocks,
   slugify
 } from './validation';

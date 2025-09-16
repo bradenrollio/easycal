@@ -498,10 +498,11 @@ function ImportContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopBar 
+      <TopBar
         showBackButton={true}
         onBack={() => router.push(`/?locationId=${locationId}`)}
       />
+
       <div className="container mx-auto px-4 py-6">
         {currentStep === 'upload' && renderUploadStep()}
         {currentStep === 'map' && renderMapStep()}

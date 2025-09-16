@@ -191,22 +191,11 @@ export function FieldMapper({ csvColumns, onMappingChange, initialMappings = {} 
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="font-medium text-blue-900 mb-2">Field Mapping Instructions</h3>
-            <p className="text-sm text-blue-700">
-              Map each CSV column to the corresponding calendar field. Auto-detection has been applied based on column names.
-            </p>
-            <p className="text-xs text-blue-600 mt-2">
-              <strong>Note:</strong> All calendars are automatically created as &quot;Event&quot; type calendars. You don&apos;t need to specify calendar type in your CSV.
-            </p>
-          </div>
-          <button
-            onClick={resetToAutoDetect}
-            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Auto-Detect Again
-          </button>
+        <div>
+          <h3 className="font-medium text-blue-900 mb-2">Field Mapping Instructions</h3>
+          <p className="text-sm text-blue-700">
+            Map each CSV column to the corresponding calendar field. Auto-detection has been applied based on column names.
+          </p>
         </div>
       </div>
 
