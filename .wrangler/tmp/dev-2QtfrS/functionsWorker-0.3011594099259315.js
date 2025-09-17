@@ -174,6 +174,462 @@ function validateCalendarDefaults(defaults) {
 }
 __name(validateCalendarDefaults, "validateCalendarDefaults");
 __name2(validateCalendarDefaults, "validateCalendarDefaults");
+async function decryptToken(encryptedToken, encryptionKey) {
+  try {
+    const [encryptedData, ivData] = encryptedToken.split(":");
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(encryptionKey.substring(0, 32)),
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"]
+    );
+    const encrypted = new Uint8Array(atob(encryptedData).split("").map((char) => char.charCodeAt(0)));
+    const iv = new Uint8Array(atob(ivData).split("").map((char) => char.charCodeAt(0)));
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      encrypted
+    );
+    return new TextDecoder().decode(decrypted);
+  } catch (error) {
+    console.error("Decryption error:", error);
+    throw new Error("Failed to decrypt token");
+  }
+}
+__name(decryptToken, "decryptToken");
+__name2(decryptToken, "decryptToken");
+async function getLocationToken(locationId2, env) {
+  try {
+    console.log("Looking for token for location:", locationId2);
+    let result = await env.DB.prepare(`
+      SELECT id, access_token, refresh_token, expires_at, user_type, company_id
+      FROM tokens
+      WHERE location_id = ?
+      ORDER BY expires_at DESC
+      LIMIT 1
+    `).bind(locationId2).first();
+    if (!result && (locationId2 === "temp_location" || locationId2?.startsWith("temp_") || locationId2?.startsWith("agency_"))) {
+      console.log("No direct location token found, checking for agency token...");
+      result = await env.DB.prepare(`
+        SELECT id, access_token, refresh_token, expires_at, user_type, company_id
+        FROM tokens
+        WHERE user_type = 'Company' AND location_id IS NULL
+        ORDER BY expires_at DESC
+        LIMIT 1
+      `).first();
+      if (result) {
+        console.log("Found agency token, will use it to get location-specific access");
+      }
+    }
+    if (!result) {
+      console.log("No token found in database");
+      return null;
+    }
+    console.log("Token found:", {
+      id: result.id,
+      userType: result.user_type,
+      hasLocation: !!result.location_id,
+      expiresAt: result.expires_at
+    });
+    if (result.expires_at) {
+      const now = Math.floor(Date.now() / 1e3);
+      const expiresAt = result.expires_at;
+      if (expiresAt <= now) {
+        console.log("Token expired, needs refresh");
+        return null;
+      }
+    } else {
+      console.log("Token has no expiration date, treating as valid");
+    }
+    console.log("Attempting to decrypt token...");
+    const accessToken = await decryptToken(result.access_token, env.ENCRYPTION_KEY);
+    console.log("Token decrypted successfully");
+    return {
+      accessToken,
+      refreshToken: result.refresh_token,
+      userType: result.user_type,
+      companyId: result.company_id
+    };
+  } catch (error) {
+    console.error("Error getting location token:", error);
+    return null;
+  }
+}
+__name(getLocationToken, "getLocationToken");
+__name2(getLocationToken, "getLocationToken");
+async function onRequestPost(context) {
+  const { env, request } = context;
+  try {
+    const { locationId: locationId2, calendarIds, updateData } = await request.json();
+    if (!locationId2 || !calendarIds || !updateData) {
+      return new Response(JSON.stringify({
+        error: "Missing required fields"
+      }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const tokenData = await getLocationToken(locationId2, env);
+    if (!tokenData) {
+      console.log("No token found for location:", locationId2);
+      return new Response(JSON.stringify({
+        error: "Not authenticated",
+        message: "No access token found for this location. Please connect to GoHighLevel first.",
+        locationId: locationId2
+      }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const accessToken = tokenData.accessToken;
+    const results = {
+      successful: [],
+      failed: []
+    };
+    for (const calendarId of calendarIds) {
+      try {
+        const calendarResponse = await fetch(
+          `https://services.leadconnectorhq.com/calendars/${calendarId}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Accept": "application/json",
+              "Version": "2021-04-15"
+            }
+          }
+        );
+        if (!calendarResponse.ok) {
+          const errorText = await calendarResponse.text();
+          console.error(`Failed to fetch calendar ${calendarId}:`, errorText);
+          throw new Error(`Failed to fetch calendar: ${calendarResponse.status}`);
+        }
+        const responseData = await calendarResponse.json();
+        const calendarData = responseData.calendar || responseData;
+        console.log("Current calendar data:", JSON.stringify(calendarData, null, 2));
+        let updatePayload = {
+          name: calendarData.name,
+          description: calendarData.description,
+          slotDuration: calendarData.slotDuration,
+          slotBuffer: calendarData.slotBuffer,
+          appoinmentPerSlot: calendarData.appoinmentPerSlot,
+          appoinmentPerDay: calendarData.appoinmentPerDay,
+          openHours: calendarData.openHours || [],
+          availabilityType: calendarData.availabilityType,
+          // CRITICAL: Preserve availability type
+          enableRecurring: calendarData.enableRecurring,
+          recurring: calendarData.recurring,
+          formId: calendarData.formId,
+          stickyContact: calendarData.stickyContact,
+          isLivePaymentMode: calendarData.isLivePaymentMode,
+          autoConfirm: calendarData.autoConfirm,
+          shouldSendAlertEmailsToAssignedMember: calendarData.shouldSendAlertEmailsToAssignedMember,
+          alertEmail: calendarData.alertEmail,
+          googleInvitationEmails: calendarData.googleInvitationEmails,
+          allowReschedule: calendarData.allowReschedule,
+          allowCancellation: calendarData.allowCancellation,
+          shouldAssignContactToTeamMember: calendarData.shouldAssignContactToTeamMember,
+          shouldSkipAssigningContactForExisting: calendarData.shouldSkipAssigningContactForExisting,
+          notes: calendarData.notes,
+          pixelId: calendarData.pixelId,
+          formSubmitType: calendarData.formSubmitType,
+          formSubmitRedirectURL: calendarData.formSubmitRedirectURL,
+          formSubmitThanksMessage: calendarData.formSubmitThanksMessage,
+          // Clean availabilities - remove MongoDB fields
+          availabilities: (calendarData.availabilities || []).map((avail) => ({
+            date: avail.date,
+            hours: avail.hours || [],
+            deleted: avail.deleted === true
+          }))
+        };
+        if (calendarData.teamMembers && calendarData.teamMembers.length > 0) {
+          updatePayload.teamMembers = calendarData.teamMembers;
+        }
+        Object.keys(updatePayload).forEach((key) => {
+          if (updatePayload[key] === void 0 || Array.isArray(updatePayload[key]) && key === "teamMembers" && updatePayload[key].length === 0) {
+            delete updatePayload[key];
+          }
+        });
+        console.log(`Calendar ${calendarId} has ${updatePayload.availabilities.length} existing availabilities`);
+        const formattedDate = updateData.date ? (/* @__PURE__ */ new Date(updateData.date + "T00:00:00.000Z")).toISOString() : null;
+        if (updateData.type === "remove") {
+          console.log(`Removing ALL date-specific overrides for calendar ${calendarId}`);
+          console.log(`Previously had ${updatePayload.availabilities.length} availabilities`);
+          console.log(`Preserving openHours:`, JSON.stringify(updatePayload.openHours));
+          console.log(`Preserving availabilityType:`, updatePayload.availabilityType);
+          if (!updatePayload.openHours || updatePayload.openHours.length === 0) {
+            console.warn(`WARNING: openHours is empty or missing for calendar ${calendarId}`);
+          }
+          if (updatePayload.availabilityType === void 0 || updatePayload.availabilityType === null) {
+            console.warn(`WARNING: availabilityType is missing for calendar ${calendarId}, setting to 0`);
+            updatePayload.availabilityType = 0;
+          }
+          updatePayload = {
+            openHours: updatePayload.openHours,
+            availabilityType: updatePayload.availabilityType,
+            availabilities: []
+          };
+          console.log(`Remove operation sending ONLY essential fields:`);
+          console.log(`- openHours: ${updatePayload.openHours?.length || 0} entries`);
+          console.log(`- availabilityType: ${updatePayload.availabilityType}`);
+          console.log(`- availabilities: [] (empty array)`);
+          console.log(`Final remove payload:`, JSON.stringify(updatePayload, null, 2));
+        } else if (updateData.type === "override") {
+          const existingAvailabilities = (updatePayload.availabilities || []).filter(
+            (avail) => {
+              const availDate = new Date(avail.date).toISOString().split("T")[0];
+              const targetDate = updateData.date;
+              return availDate !== targetDate;
+            }
+          );
+          console.log(`Keeping ${existingAvailabilities.length} existing availabilities, updating date: ${updateData.date}`);
+          console.log(`Override operation - Preserving openHours:`, JSON.stringify(updatePayload.openHours));
+          console.log(`Override operation - Preserving availabilityType:`, updatePayload.availabilityType);
+          const overrideEntry = {
+            date: formattedDate,
+            hours: [{
+              openHour: parseInt(updateData.startTime.split(":")[0]),
+              openMinute: parseInt(updateData.startTime.split(":")[1]),
+              closeHour: parseInt(updateData.endTime.split(":")[0]),
+              closeMinute: parseInt(updateData.endTime.split(":")[1])
+            }],
+            deleted: false
+          };
+          const newAvailabilities = [
+            ...existingAvailabilities,
+            overrideEntry
+          ];
+          updatePayload = {
+            openHours: updatePayload.openHours,
+            availabilityType: updatePayload.availabilityType || 0,
+            availabilities: newAvailabilities
+          };
+          console.log(`Override operation - Final availabilities array:`, JSON.stringify(updatePayload.availabilities));
+        } else if (updateData.type === "block") {
+          const existingAvailabilities = (updatePayload.availabilities || []).filter(
+            (avail) => {
+              const availDate = new Date(avail.date).toISOString().split("T")[0];
+              const targetDate = updateData.date;
+              console.log(`Comparing dates - Existing: ${availDate}, Target: ${targetDate}, Keep: ${availDate !== targetDate}`);
+              return availDate !== targetDate;
+            }
+          );
+          console.log(`Keeping ${existingAvailabilities.length} existing availabilities, blocking date: ${updateData.date}`);
+          console.log(`Formatted date for block: ${formattedDate}`);
+          console.log(`Block operation - Preserving openHours:`, JSON.stringify(updatePayload.openHours));
+          console.log(`Block operation - Preserving availabilityType:`, updatePayload.availabilityType);
+          const blockedEntry = {
+            openHours: [],
+            // Changed from "hours" to "openHours" based on working cURL
+            date: formattedDate
+          };
+          console.log(`Creating blocked entry:`, JSON.stringify(blockedEntry));
+          const newAvailabilities = [
+            ...existingAvailabilities,
+            blockedEntry
+          ];
+          updatePayload = {
+            openHours: updatePayload.openHours,
+            availabilityType: updatePayload.availabilityType || 0,
+            availabilities: newAvailabilities
+          };
+          console.log(`Block operation - Final availabilities array:`, JSON.stringify(updatePayload.availabilities));
+        }
+        console.log(`Final availabilities count: ${updatePayload.availabilities.length}`);
+        console.log("Final availabilities being sent to GHL:", JSON.stringify(updatePayload.availabilities, null, 2));
+        console.log("Update payload keys:", Object.keys(updatePayload));
+        if (updateData.type === "remove" || updateData.type === "block") {
+          console.log(`Complete ${updateData.type} payload being sent:`, JSON.stringify(updatePayload, null, 2));
+          if (updateData.type === "remove") {
+            console.log("REMOVE OPERATION VERIFICATION:");
+            console.log("- availabilities is array:", Array.isArray(updatePayload.availabilities));
+            console.log("- availabilities length:", updatePayload.availabilities.length);
+            console.log("- openHours exists:", !!updatePayload.openHours);
+            console.log("- openHours count:", updatePayload.openHours?.length || 0);
+            console.log("- availabilityType:", updatePayload.availabilityType);
+          }
+        }
+        console.log("PAYLOAD BEING SENT TO GHL:");
+        console.log(JSON.stringify(updatePayload, null, 2));
+        const updateResponse = await fetch(
+          `https://services.leadconnectorhq.com/calendars/${calendarId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              "Version": "2021-04-15"
+            },
+            body: JSON.stringify(updatePayload)
+          }
+        );
+        const responseText = await updateResponse.text();
+        console.log(`Update response status: ${updateResponse.status}`);
+        console.log(`Update response for calendar ${calendarId}:`, responseText);
+        try {
+          const responseJson = JSON.parse(responseText);
+          if (responseJson.calendar && responseJson.calendar.availabilities) {
+            console.log(`GHL returned ${responseJson.calendar.availabilities.length} availabilities`);
+          }
+        } catch (e) {
+          console.log("Could not parse response as JSON");
+        }
+        if (updateResponse.ok) {
+          results.successful.push({
+            calendarId,
+            name: calendarData.name || calendarData.title || "Unknown",
+            // Include debug info for block operations
+            ...updateData.type === "block" && {
+              debug_payload: {
+                openHours_count: updatePayload.openHours?.length || 0,
+                availabilityType: updatePayload.availabilityType,
+                availabilities: updatePayload.availabilities
+              }
+            }
+          });
+        } else {
+          throw new Error(`Update failed: ${responseText}`);
+        }
+      } catch (error) {
+        console.error(`Failed to update calendar ${calendarId}:`, error);
+        results.failed.push({
+          calendarId,
+          error: error.message
+        });
+      }
+    }
+    try {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS batch_updates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          location_id TEXT NOT NULL,
+          update_type TEXT NOT NULL,
+          update_data TEXT NOT NULL,
+          calendars_updated TEXT NOT NULL,
+          successful_count INTEGER NOT NULL,
+          failed_count INTEGER NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+      await env.DB.prepare(`
+        INSERT INTO batch_updates (
+          location_id,
+          update_type,
+          update_data,
+          calendars_updated,
+          successful_count,
+          failed_count
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(
+        locationId2,
+        updateData.type,
+        JSON.stringify(updateData),
+        JSON.stringify(calendarIds),
+        results.successful.length,
+        results.failed.length
+      ).run();
+    } catch (err) {
+      console.log("Could not log batch update (optional):", err);
+    }
+    return new Response(JSON.stringify({
+      success: true,
+      message: `Updated ${results.successful.length} calendar(s)`,
+      results,
+      note: "Calendar structure varies by GHL configuration. Check console logs for field mapping."
+    }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
+    });
+  } catch (error) {
+    console.error("Batch update error:", error);
+    return new Response(JSON.stringify({
+      error: "Batch update failed",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+__name(onRequestPost, "onRequestPost");
+__name2(onRequestPost, "onRequestPost");
+async function onRequestOptions() {
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    }
+  });
+}
+__name(onRequestOptions, "onRequestOptions");
+__name2(onRequestOptions, "onRequestOptions");
+async function onRequestGet(context) {
+  const { env, request } = context;
+  const url = new URL(request.url);
+  const calendarId = url.searchParams.get("calendarId");
+  const locationId2 = url.searchParams.get("locationId");
+  if (!calendarId || !locationId2) {
+    return new Response(JSON.stringify({
+      error: "Missing calendarId or locationId"
+    }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+  try {
+    const tokenData = await getLocationToken(locationId2, env);
+    if (!tokenData) {
+      return new Response(JSON.stringify({
+        error: "No authentication found"
+      }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const response = await fetch(
+      `https://services.leadconnectorhq.com/calendars/${calendarId}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${tokenData.accessToken}`,
+          "Accept": "application/json",
+          "Version": "2021-04-15"
+        }
+      }
+    );
+    const data = await response.json();
+    return new Response(JSON.stringify({
+      success: true,
+      calendar: data,
+      structure: {
+        topLevelFields: Object.keys(data || {}),
+        scheduleFields: data.schedule ? Object.keys(data.schedule) : [],
+        availabilityFields: data.availability ? Object.keys(data.availability) : [],
+        note: "Use this structure to understand how GHL stores calendar data"
+      }
+    }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      error: "Failed to fetch calendar",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+__name(onRequestGet, "onRequestGet");
+__name2(onRequestGet, "onRequestGet");
 async function onRequest2(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -311,7 +767,7 @@ async function onRequest3(context) {
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
     }
-    const tokenData = await getLocationToken(locationId2, env);
+    const tokenData = await getLocationToken2(locationId2, env);
     if (!tokenData) {
       console.log("No token found for location:", locationId2);
       return new Response(JSON.stringify({
@@ -348,7 +804,7 @@ async function onRequest3(context) {
 }
 __name(onRequest3, "onRequest3");
 __name2(onRequest3, "onRequest");
-async function getLocationToken(locationId2, env) {
+async function getLocationToken2(locationId2, env) {
   try {
     console.log("Looking for token for location:", locationId2);
     let result = await env.DB.prepare(`
@@ -382,7 +838,7 @@ async function getLocationToken(locationId2, env) {
     console.log("Token expires at:", result.expires_at, "Current time:", now);
     if (result.expires_at <= now) {
       console.warn("Token expired for location:", locationId2, "- attempting to refresh...");
-      const refreshToken = await decryptToken(result.refresh_token, env.ENCRYPTION_KEY);
+      const refreshToken = await decryptToken2(result.refresh_token, env.ENCRYPTION_KEY);
       const newTokenData = await refreshAccessToken(refreshToken, env);
       if (!newTokenData) {
         console.error("Failed to refresh token for location:", locationId2);
@@ -413,7 +869,7 @@ async function getLocationToken(locationId2, env) {
       };
     }
     console.log("Attempting to decrypt token...");
-    const accessToken = await decryptToken(result.access_token, env.ENCRYPTION_KEY);
+    const accessToken = await decryptToken2(result.access_token, env.ENCRYPTION_KEY);
     console.log("Token decrypted successfully");
     if (result.user_type === "Company" && result.company_id) {
       console.log("Agency token detected, getting location-specific token...");
@@ -439,8 +895,8 @@ async function getLocationToken(locationId2, env) {
     return null;
   }
 }
-__name(getLocationToken, "getLocationToken");
-__name2(getLocationToken, "getLocationToken");
+__name(getLocationToken2, "getLocationToken2");
+__name2(getLocationToken2, "getLocationToken");
 async function refreshAccessToken(refreshToken, env) {
   try {
     console.log("Refreshing access token...");
@@ -538,7 +994,7 @@ async function getLocationTokenDirect(agencyToken, companyId2, locationId2) {
 }
 __name(getLocationTokenDirect, "getLocationTokenDirect");
 __name2(getLocationTokenDirect, "getLocationTokenDirect");
-async function decryptToken(encryptedToken, encryptionKey) {
+async function decryptToken2(encryptedToken, encryptionKey) {
   try {
     const [encryptedData, ivData] = encryptedToken.split(":");
     const key = await crypto.subtle.importKey(
@@ -561,8 +1017,8 @@ async function decryptToken(encryptedToken, encryptionKey) {
     throw new Error("Failed to decrypt token");
   }
 }
-__name(decryptToken, "decryptToken");
-__name2(decryptToken, "decryptToken");
+__name(decryptToken2, "decryptToken2");
+__name2(decryptToken2, "decryptToken");
 async function handleListCalendars(accessToken, locationId2, corsHeaders) {
   try {
     const actualLocationId = locationId2;
@@ -866,7 +1322,7 @@ async function onRequest4(context) {
       console.log("DEBUG: Token expired, attempting refresh...");
       let refreshToken;
       try {
-        refreshToken = await decryptToken2(result.refresh_token, env.ENCRYPTION_KEY);
+        refreshToken = await decryptToken3(result.refresh_token, env.ENCRYPTION_KEY);
       } catch (err) {
         return new Response(JSON.stringify({
           error: "Failed to decrypt refresh token",
@@ -913,7 +1369,7 @@ async function onRequest4(context) {
     }
     let accessToken;
     try {
-      accessToken = await decryptToken2(result.access_token, env.ENCRYPTION_KEY);
+      accessToken = await decryptToken3(result.access_token, env.ENCRYPTION_KEY);
       console.log("DEBUG: Token decrypted successfully, length:", accessToken.length);
     } catch (decryptError) {
       console.error("DEBUG: Token decryption failed:", decryptError);
@@ -985,7 +1441,7 @@ async function onRequest4(context) {
 }
 __name(onRequest4, "onRequest4");
 __name2(onRequest4, "onRequest");
-async function decryptToken2(encryptedToken, encryptionKey) {
+async function decryptToken3(encryptedToken, encryptionKey) {
   try {
     const [encryptedData, ivData] = encryptedToken.split(":");
     if (!encryptedData || !ivData) {
@@ -1011,8 +1467,8 @@ async function decryptToken2(encryptedToken, encryptionKey) {
     throw new Error(`Failed to decrypt token: ${error.message}`);
   }
 }
-__name(decryptToken2, "decryptToken2");
-__name2(decryptToken2, "decryptToken");
+__name(decryptToken3, "decryptToken3");
+__name2(decryptToken3, "decryptToken");
 async function refreshAccessToken2(refreshToken, env) {
   try {
     console.log("DEBUG: Refreshing access token...");
@@ -1171,7 +1627,7 @@ async function onRequest6(context) {
       });
     }
     console.log("Looking for token for location:", locationId2);
-    const tokenData = await getLocationToken2(locationId2, env);
+    const tokenData = await getLocationToken3(locationId2, env);
     if (!tokenData) {
       console.error("No token found for location:", locationId2);
       return new Response(JSON.stringify({
@@ -1705,7 +2161,7 @@ async function findCalendarBySlug(slug, locationId2, accessToken) {
 }
 __name(findCalendarBySlug, "findCalendarBySlug");
 __name2(findCalendarBySlug, "findCalendarBySlug");
-async function getLocationToken2(locationId2, env) {
+async function getLocationToken3(locationId2, env) {
   try {
     console.log("getLocationToken called for:", locationId2);
     const result = await env.DB.prepare(`
@@ -1727,7 +2183,7 @@ async function getLocationToken2(locationId2, env) {
       return null;
     }
     console.log("Attempting to decrypt token...");
-    const accessToken = await decryptToken3(result.access_token, env.ENCRYPTION_KEY);
+    const accessToken = await decryptToken4(result.access_token, env.ENCRYPTION_KEY);
     console.log("Token decrypted successfully");
     return {
       accessToken,
@@ -1740,9 +2196,9 @@ async function getLocationToken2(locationId2, env) {
     return null;
   }
 }
-__name(getLocationToken2, "getLocationToken2");
-__name2(getLocationToken2, "getLocationToken");
-async function decryptToken3(encryptedToken, encryptionKey) {
+__name(getLocationToken3, "getLocationToken3");
+__name2(getLocationToken3, "getLocationToken");
+async function decryptToken4(encryptedToken, encryptionKey) {
   try {
     const [encryptedData, ivData] = encryptedToken.split(":");
     const key = await crypto.subtle.importKey(
@@ -1765,8 +2221,8 @@ async function decryptToken3(encryptedToken, encryptionKey) {
     throw new Error("Failed to decrypt token");
   }
 }
-__name(decryptToken3, "decryptToken3");
-__name2(decryptToken3, "decryptToken");
+__name(decryptToken4, "decryptToken4");
+__name2(decryptToken4, "decryptToken");
 async function onRequest7(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -1805,7 +2261,7 @@ async function onRequest7(context) {
         headers: { "Content-Type": "application/json", ...corsHeaders }
       });
     }
-    const tokenData = await getLocationToken3(locationId2, env);
+    const tokenData = await getLocationToken4(locationId2, env);
     if (!tokenData) {
       return new Response(JSON.stringify({
         timeZone: "America/New_York"
@@ -1859,7 +2315,7 @@ async function onRequest7(context) {
 }
 __name(onRequest7, "onRequest7");
 __name2(onRequest7, "onRequest");
-async function getLocationToken3(locationId2, env) {
+async function getLocationToken4(locationId2, env) {
   try {
     const result = await env.DB.prepare(`
       SELECT access_token, refresh_token, expires_at 
@@ -1876,7 +2332,7 @@ async function getLocationToken3(locationId2, env) {
       console.warn("Token expired for location:", locationId2);
       return null;
     }
-    const accessToken = await decryptToken4(result.access_token, env.ENCRYPTION_KEY);
+    const accessToken = await decryptToken5(result.access_token, env.ENCRYPTION_KEY);
     return {
       accessToken,
       refreshToken: result.refresh_token,
@@ -1887,9 +2343,9 @@ async function getLocationToken3(locationId2, env) {
     return null;
   }
 }
-__name(getLocationToken3, "getLocationToken3");
-__name2(getLocationToken3, "getLocationToken");
-async function decryptToken4(encryptedToken, encryptionKey) {
+__name(getLocationToken4, "getLocationToken4");
+__name2(getLocationToken4, "getLocationToken");
+async function decryptToken5(encryptedToken, encryptionKey) {
   try {
     const [encryptedData, ivData] = encryptedToken.split(":");
     const key = await crypto.subtle.importKey(
@@ -1912,8 +2368,8 @@ async function decryptToken4(encryptedToken, encryptionKey) {
     throw new Error("Failed to decrypt token");
   }
 }
-__name(decryptToken4, "decryptToken4");
-__name2(decryptToken4, "decryptToken");
+__name(decryptToken5, "decryptToken5");
+__name2(decryptToken5, "decryptToken");
 async function onRequest8(context) {
   const { request, env } = context;
   const corsHeaders = {
@@ -1971,7 +2427,7 @@ async function onRequest9(context) {
   }
   try {
     const locationId2 = url.searchParams.get("locationId") || "EnUqtThIwW8pdTLOvuO7";
-    const tokenData = await getLocationToken4(locationId2, env);
+    const tokenData = await getLocationToken5(locationId2, env);
     if (!tokenData) {
       return new Response(JSON.stringify({
         error: "No token found",
@@ -2060,7 +2516,7 @@ async function onRequest9(context) {
 }
 __name(onRequest9, "onRequest9");
 __name2(onRequest9, "onRequest");
-async function getLocationToken4(locationId2, env) {
+async function getLocationToken5(locationId2, env) {
   try {
     const result = await env.DB.prepare(`
       SELECT access_token, refresh_token, expires_at 
@@ -2076,7 +2532,7 @@ async function getLocationToken4(locationId2, env) {
     if (result.expires_at <= now) {
       console.warn("Token expired for location:", locationId2, "- attempting to refresh...");
       try {
-        const refreshToken = await decryptToken5(result.refresh_token, env.ENCRYPTION_KEY);
+        const refreshToken = await decryptToken6(result.refresh_token, env.ENCRYPTION_KEY);
         const tokenResponse = await fetch("https://services.leadconnectorhq.com/oauth/token", {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -2122,7 +2578,7 @@ async function getLocationToken4(locationId2, env) {
         return null;
       }
     }
-    const accessToken = await decryptToken5(result.access_token, env.ENCRYPTION_KEY);
+    const accessToken = await decryptToken6(result.access_token, env.ENCRYPTION_KEY);
     return {
       accessToken,
       refreshToken: result.refresh_token,
@@ -2133,9 +2589,9 @@ async function getLocationToken4(locationId2, env) {
     return null;
   }
 }
-__name(getLocationToken4, "getLocationToken4");
-__name2(getLocationToken4, "getLocationToken");
-async function decryptToken5(encryptedToken, encryptionKey) {
+__name(getLocationToken5, "getLocationToken5");
+__name2(getLocationToken5, "getLocationToken");
+async function decryptToken6(encryptedToken, encryptionKey) {
   try {
     const [encryptedData, ivData] = encryptedToken.split(":");
     const key = await crypto.subtle.importKey(
@@ -2158,8 +2614,8 @@ async function decryptToken5(encryptedToken, encryptionKey) {
     throw new Error("Failed to decrypt token");
   }
 }
-__name(decryptToken5, "decryptToken5");
-__name2(decryptToken5, "decryptToken");
+__name(decryptToken6, "decryptToken6");
+__name2(decryptToken6, "decryptToken");
 async function encryptTokens3(tokens, encryptionKey) {
   try {
     const key = await crypto.subtle.importKey(
@@ -2261,7 +2717,7 @@ async function onRequest10(context) {
     if (tokenRecord.expires_at <= now) {
       console.log("\u{1F504} Token is expired, attempting refresh...");
       try {
-        const refreshToken = await decryptToken6(tokenRecord.refresh_token, env.ENCRYPTION_KEY);
+        const refreshToken = await decryptToken7(tokenRecord.refresh_token, env.ENCRYPTION_KEY);
         console.log("\u2705 Refresh token decrypted successfully");
         const tokenResponse = await fetch("https://services.leadconnectorhq.com/oauth/token", {
           method: "POST",
@@ -2346,7 +2802,7 @@ async function onRequest10(context) {
     }
     console.log("\u2705 Token is valid, testing API call...");
     try {
-      const accessToken = await decryptToken6(tokenRecord.access_token, env.ENCRYPTION_KEY);
+      const accessToken = await decryptToken7(tokenRecord.access_token, env.ENCRYPTION_KEY);
       const testResponse = await fetch(`https://services.leadconnectorhq.com/calendars?locationId=${locationId2}`, {
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -2412,7 +2868,7 @@ async function onRequest10(context) {
 }
 __name(onRequest10, "onRequest10");
 __name2(onRequest10, "onRequest");
-async function decryptToken6(encryptedToken, encryptionKey) {
+async function decryptToken7(encryptedToken, encryptionKey) {
   const [encryptedData, ivData] = encryptedToken.split(":");
   const key = await crypto.subtle.importKey(
     "raw",
@@ -2430,8 +2886,8 @@ async function decryptToken6(encryptedToken, encryptionKey) {
   );
   return new TextDecoder().decode(decrypted);
 }
-__name(decryptToken6, "decryptToken6");
-__name2(decryptToken6, "decryptToken");
+__name(decryptToken7, "decryptToken7");
+__name2(decryptToken7, "decryptToken");
 async function encryptTokens4(tokens, encryptionKey) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -3093,6 +3549,27 @@ var routes = [
     method: "",
     middlewares: [],
     modules: [onRequest]
+  },
+  {
+    routePath: "/api/batch-update-calendars",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet]
+  },
+  {
+    routePath: "/api/batch-update-calendars",
+    mountPath: "/api",
+    method: "OPTIONS",
+    middlewares: [],
+    modules: [onRequestOptions]
+  },
+  {
+    routePath: "/api/batch-update-calendars",
+    mountPath: "/api",
+    method: "POST",
+    middlewares: [],
+    modules: [onRequestPost]
   },
   {
     routePath: "/api/brand-config",

@@ -1,4 +1,7 @@
 import { onRequest as __api_settings_defaults_js_onRequest } from "/Users/elnueve/Documents/Enrollio/EasyCal/easycal/functions/api/settings/defaults.js"
+import { onRequestGet as __api_batch_update_calendars_js_onRequestGet } from "/Users/elnueve/Documents/Enrollio/EasyCal/easycal/functions/api/batch-update-calendars.js"
+import { onRequestOptions as __api_batch_update_calendars_js_onRequestOptions } from "/Users/elnueve/Documents/Enrollio/EasyCal/easycal/functions/api/batch-update-calendars.js"
+import { onRequestPost as __api_batch_update_calendars_js_onRequestPost } from "/Users/elnueve/Documents/Enrollio/EasyCal/easycal/functions/api/batch-update-calendars.js"
 import { onRequest as __api_brand_config_js_onRequest } from "/Users/elnueve/Documents/Enrollio/EasyCal/easycal/functions/api/brand-config.js"
 import { onRequest as __api_calendars_js_onRequest } from "/Users/elnueve/Documents/Enrollio/EasyCal/easycal/functions/api/calendars.js"
 import { onRequest as __api_debug_token_js_onRequest } from "/Users/elnueve/Documents/Enrollio/EasyCal/easycal/functions/api/debug-token.js"
@@ -19,6 +22,27 @@ export const routes = [
       method: "",
       middlewares: [],
       modules: [__api_settings_defaults_js_onRequest],
+    },
+  {
+      routePath: "/api/batch-update-calendars",
+      mountPath: "/api",
+      method: "GET",
+      middlewares: [],
+      modules: [__api_batch_update_calendars_js_onRequestGet],
+    },
+  {
+      routePath: "/api/batch-update-calendars",
+      mountPath: "/api",
+      method: "OPTIONS",
+      middlewares: [],
+      modules: [__api_batch_update_calendars_js_onRequestOptions],
+    },
+  {
+      routePath: "/api/batch-update-calendars",
+      mountPath: "/api",
+      method: "POST",
+      middlewares: [],
+      modules: [__api_batch_update_calendars_js_onRequestPost],
     },
   {
       routePath: "/api/brand-config",

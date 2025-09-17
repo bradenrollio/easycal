@@ -2,12 +2,13 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Trash2, MoreHorizontal, CheckSquare, Square, Upload } from 'lucide-react';
+import { Search, Trash2, MoreHorizontal, CheckSquare, Square, Upload, Clock } from 'lucide-react';
 import { getLocationId } from '@/lib/api/ghl/context';
 import { Button } from '@/components/ui/button';
 import { Loading } from '@/components/Loading';
 import { TopBar } from '@/components/TopBar';
 import { useToast } from '@/components/Toast';
+import { BatchUpdateModal, BatchUpdateData } from '@/components/BatchUpdateModal';
 
 interface Calendar {
   id: string;
@@ -27,6 +28,7 @@ function CalendarsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [showBatchUpdate, setShowBatchUpdate] = useState(false);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [locationDetected, setLocationDetected] = useState(false);
 
@@ -128,6 +130,43 @@ function CalendarsContent() {
   };
 
   // Handle bulk delete
+  const handleBatchUpdate = async (updateData: BatchUpdateData) => {
+    setIsLoading(true);
+
+    try {
+      const calendarIds = Array.from(selectedCalendars);
+
+      const response = await fetch('/api/batch-update-calendars', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          locationId,
+          calendarIds,
+          updateData
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        setSelectedCalendars(new Set());
+        // Optionally reload calendars to show updated state
+        await loadCalendars();
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Batch update failed');
+      }
+    } catch (error) {
+      console.error('Batch update failed:', error);
+      toast.error(`Batch update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+      setShowBatchUpdate(false);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedCalendars.size === 0) {
       toast.warning('No calendars selected for deletion');
@@ -208,14 +247,26 @@ function CalendarsContent() {
           </div>
 
           {selectedCalendars.size > 0 && (
-            <button
-              onClick={() => setShowBulkDelete(true)}
-              disabled={isLoading}
-              className="bg-red-600 text-white rounded-md px-3 md:px-4 py-1.5 md:py-2 text-sm font-medium hover:bg-red-700 transition duration-200"
-            >
-              <Trash2 className="w-4 h-4 inline mr-2" />
-              Delete Selected ({selectedCalendars.size})
-            </button>
+            <div className="flex space-x-2">
+              {locationId === 'mDfWsppm3K1s6XSbKcBh' && (
+                <button
+                  onClick={() => setShowBatchUpdate(true)}
+                  disabled={isLoading}
+                  className="bg-brand-yellow text-brand-navy rounded-md px-3 md:px-4 py-1.5 md:py-2 text-sm font-medium hover:bg-yellow-500 transition duration-200 flex items-center"
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Batch Update ({selectedCalendars.size})
+                </button>
+              )}
+              <button
+                onClick={() => setShowBulkDelete(true)}
+                disabled={isLoading}
+                className="bg-red-600 text-white rounded-md px-3 md:px-4 py-1.5 md:py-2 text-sm font-medium hover:bg-red-700 transition duration-200 flex items-center"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete ({selectedCalendars.size})
+              </button>
+            </div>
           )}
         </div>
 
@@ -330,6 +381,17 @@ function CalendarsContent() {
       </div>
 
         {/* Bulk Delete Confirmation Modal */}
+        {/* Batch Update Modal */}
+        {showBatchUpdate && (
+          <BatchUpdateModal
+            isOpen={showBatchUpdate}
+            onClose={() => setShowBatchUpdate(false)}
+            selectedCalendars={Array.from(selectedCalendars)}
+            onUpdate={handleBatchUpdate}
+          />
+        )}
+
+        {/* Bulk Delete Modal */}
         {showBulkDelete && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-lg">
